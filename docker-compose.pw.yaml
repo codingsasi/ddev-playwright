@@ -1,0 +1,22 @@
+#ddev-generated
+# Docker compose configuration for Playwright testing environment
+services:
+  playwright:
+    container_name: ddev-${DDEV_SITENAME}-playwright
+    image: mcr.microsoft.com/playwright:v1.51.1-noble
+    command: tail -f /dev/null
+    restart: "no"
+    # These labels ensure this service is discoverable by ddev.
+    labels:
+      com.ddev.site-name: ${DDEV_SITENAME}
+      com.ddev.approot: $DDEV_APPROOT
+    environment:
+      - DDEV_HOSTNAME=${DDEV_HOSTNAME}
+      - DDEV_PRIMARY_URL=${DDEV_PRIMARY_URL}
+      - HTTP_EXPOSE=9323:9323
+    volumes:
+      - type: bind
+        source: ${DDEV_APPROOT}
+        target: /app
+      - ".:/mnt/ddev_config"
+      - "ddev-global-cache:/mnt/ddev-global-cache"

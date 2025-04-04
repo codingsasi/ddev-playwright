@@ -1,0 +1,21 @@
+#!/bin/bash
+#ddev-generated
+
+## Description: Run Playwright tests inside the Playwright container
+## Usage: playwright [flags] [args]
+## Example: "ddev playwright --help" or "ddev playwright test"
+## ExecRaw: true
+
+set -e
+
+# Enter the Playwright container and run the command
+if [ $# -eq 0 ]; then
+  echo "Usage: ddev playwright [command]"
+  echo "Examples:"
+  echo "  ddev playwright test"
+  echo "  ddev playwright --help"
+  echo "  ddev playwright install"
+  exit 1
+fi
+
+docker exec -it ddev-${DDEV_SITENAME}-playwright npx playwright "$@"
