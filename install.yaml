@@ -74,7 +74,7 @@ post_install_actions:
       nvm use 20
       npm init playwright@latest -- --quiet --yes --lang=TypeScript --no-browsers
 
-      # Note: Browser installation can be done later with 'ddev playwright install --with-deps'
+      # Note: Browser installation can be done later with 'ddev playwright install' and 'ddev playwright install-deps'
 
       echo 'Playwright project initialized successfully!'
     " || echo "Note: Playwright initialization will occur on first test run"
@@ -104,8 +104,9 @@ post_install_actions:
     echo ""
     echo "Next steps:"
     echo "  1. ddev restart # if you haven't already"
-    echo "  2. Install browser binaries: ddev playwright install --with-deps"
-    echo "  3. Run your first test: ddev playwright test tests/example.spec.ts"
+    echo "  2. Install browser binaries: ddev playwright install"
+    echo "  3. Install system dependencies: ddev playwright install-deps"
+    echo "  4. Run your first test: ddev playwright test tests/example.spec.ts"
     echo ""
     echo "To run Playwright tests:"
     echo "  ddev playwright test"

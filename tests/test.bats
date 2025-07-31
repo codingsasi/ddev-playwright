@@ -75,8 +75,9 @@ teardown() {
     ls -la ${PW_DIR}/
   fi
 
-  echo "# Install Playwright browsers" >&3
-  ddev playwright install chrome chromium msedge firefox webkit --with-deps
+  echo "# Install Playwright browsers and dependencies" >&3
+  ddev playwright install
+  ddev playwright install-deps
 
   echo "# Run Playwright test (after browser installation)" >&3
   ddev playwright test
@@ -145,8 +146,9 @@ teardown() {
     ls -la ${PW_DIR}/
   fi
 
-  echo "# Install browsers before running tests" >&3
+  echo "# Install browsers and dependencies before running tests" >&3
   ddev playwright install
+  ddev playwright install-deps
 
   echo "# Run Playwright test after browser installation" >&3
   ddev playwright test
