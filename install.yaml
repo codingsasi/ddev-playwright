@@ -24,7 +24,7 @@ pre_install_actions:
 project_files:
   - config.playwright.yaml
   - commands/web/playwright
-  - examples
+  - pw-examples
 
 # List of files and directories that are copied into the global .ddev directory
 # DDEV environment variables can be interpolated into these filenames
@@ -74,7 +74,7 @@ post_install_actions:
       nvm use 20
       npm init playwright@latest -- --quiet --yes --lang=TypeScript --no-browsers
 
-      # Note: Browser installation can be done later with 'ddev playwright install'
+      # Note: Browser installation can be done later with 'ddev playwright install --with-deps'
 
       echo 'Playwright project initialized successfully!'
     " || echo "Note: Playwright initialization will occur on first test run"
@@ -84,13 +84,13 @@ post_install_actions:
 
     # Copy our custom config to override the generated one
     if [ -f "${DDEV_APPROOT}/test/playwright/playwright.config.ts" ]; then
-      cp examples/playwright.config.ts "${DDEV_APPROOT}/test/playwright/playwright.config.ts"
+      cp pw-examples/playwright.config.ts "${DDEV_APPROOT}/test/playwright/playwright.config.ts"
       echo "Applied DDEV-optimized Playwright configuration"
     fi
 
     # Copy our custom example test
     if [ -f "${DDEV_APPROOT}/test/playwright/tests/example.spec.ts" ]; then
-      cp examples/example-test.spec.ts "${DDEV_APPROOT}/test/playwright/tests/example.spec.ts"
+      cp pw-examples/example-test.spec.ts "${DDEV_APPROOT}/test/playwright/tests/example.spec.ts"
       echo "Applied DDEV-optimized example test"
     fi
   - |
@@ -103,8 +103,9 @@ post_install_actions:
     echo "  ✓ DDEV-optimized configuration applied"
     echo ""
     echo "Next steps:"
-    echo "  1. Install browser binaries: ddev playwright install --with-deps"
-    echo "  2. Run your first test: ddev playwright test tests/example.spec.ts"
+    echo "  1. ddev restart # if you haven't already"
+    echo "  2. Install browser binaries: ddev playwright install --with-deps"
+    echo "  3. Run your first test: ddev playwright test tests/example.spec.ts"
     echo ""
     echo "To run Playwright tests:"
     echo "  ddev playwright test"
@@ -128,6 +129,7 @@ removal_actions:
     echo "Playwright addon has been removed."
     echo "Note: Playwright binaries remain installed in the web container."
     echo "To completely remove Playwright, you may need to rebuild your web container."
+    rm -rf .ddev/pw-examples
 
 # Advanced usage - YAML files can be read in and then used as go template actions
 # in pre_install_actions and post_install_actions

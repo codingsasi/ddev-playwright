@@ -76,7 +76,7 @@ teardown() {
   fi
 
   echo "# Install Playwright browsers" >&3
-  ddev playwright install --with-deps
+  ddev playwright install chrome chromium msedge firefox webkit --with-deps
 
   echo "# Run Playwright test (after browser installation)" >&3
   ddev playwright test
