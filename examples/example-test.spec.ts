@@ -9,6 +9,9 @@ test('homepage returns 200 status', async ({ page }) => {
   // Verify the page loaded successfully
   expect(response?.status()).toBe(200);
 
+  // Check that the page has the expected content
+  await expect(page.getByRole('heading', { name: 'The way is clear!' })).toBeVisible();
+
   // Example of taking a screenshot
   await page.screenshot({ path: 'homepage.png' });
 });

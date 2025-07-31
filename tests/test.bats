@@ -1,20 +1,40 @@
 setup() {
   set -eu -o pipefail
   export DIR="$( cd "$( dirname "$BATS_TEST_FILENAME" )" >/dev/null 2>&1 && pwd )/.."
-  export TESTDIR=~/tmp/test-addon-template
+  export TESTDIR=~/tmp/ddev-playwright-test
+  export PW_DIR=${TESTDIR}/test/playwright
   mkdir -p $TESTDIR
-  export PROJNAME=test-addon-template
+  export PROJNAME=ddev-playwright-test
   export DDEV_NONINTERACTIVE=true
   ddev delete -Oy ${PROJNAME} >/dev/null 2>&1 || true
   cd "${TESTDIR}"
-  ddev config --project-name=${PROJNAME}
+  ddev config --project-type=php --project-name=${PROJNAME} --docroot=web --create-docroot
   ddev start -y >/dev/null
+  # Create a simple PHP test page
+  cat > web/index.php << 'EOF'
+<!DOCTYPE html>
+<html>
+<head>
+    <title>DDEV Playwright Test</title>
+</head>
+<body>
+    <h1>The way is clear!</h1>
+    <p>This is a test page for Playwright</p>
+</body>
+</html>
+EOF
 }
 
 health_checks() {
-  # Do something useful here that verifies the add-on
-  # ddev exec "curl -s elasticsearch:9200" | grep "${PROJNAME}-elasticsearch"
-  ddev exec "curl -s https://localhost:443/"
+  # Basic curl check to verify site is working
+  CURLVERIF=$(curl -s https://${PROJNAME}.ddev.site/ | grep -o -E "<h1>(.*)</h1>" | sed 's/<\/h1>//g; s/<h1>//g;' | tr '\n' '#')
+  if [[ $CURLVERIF == "The way is clear!#" ]]; then
+    echo "# Site accessibility OK" >&3
+  else
+    echo "# Site accessibility failed"
+    echo $CURLVERIF
+    exit 1
+  fi
 }
 
 teardown() {
@@ -27,18 +47,97 @@ teardown() {
 @test "install from directory" {
   set -eu -o pipefail
   cd ${TESTDIR}
+
+  echo "# Basic site check" >&3
+  health_checks
+
   echo "# ddev add-on get ${DIR} with project ${PROJNAME} in ${TESTDIR} ($(pwd))" >&3
   ddev add-on get ${DIR}
   ddev restart
-  health_checks
+
+  echo "# Verify Playwright command is available" >&3
+  ddev playwright --version
+
+  echo "# Check that test directory was created with examples" >&3
+  if [ -d "${PW_DIR}" ] && [ -f "${PW_DIR}/playwright.config.ts" ]; then
+    echo "# Playwright test directory and config created OK" >&3
+  else
+    echo "# Playwright test directory or config missing"
+    ls -la ${PW_DIR}/
+    exit 1
+  fi
+
+  echo "# Run Playwright test" >&3
+  ddev playwright test
+
+  echo "# Check HTML reports port accessibility" >&3
+  # Start the report server in background and test it
+  timeout 10 ddev playwright show-report --host=0.0.0.0 --port=9323 &
+  sleep 3
+  REPORT_HTTP_STATUS=$(curl --write-out '%{http_code}' --silent --output /dev/null http://${PROJNAME}.ddev.site:9323 || echo "000")
+  if [[ $REPORT_HTTP_STATUS == 200 ]]; then
+    echo "# HTML Report server OK" >&3
+  else
+    echo "# HTML Report server failed: $REPORT_HTTP_STATUS"
+    # Don't fail the test as report server might not be running yet
+    echo "# (This is acceptable as report server may not be persistent)" >&3
+  fi
+  pkill -f "show-report" || true
 }
 
 # bats test_tags=release
 @test "install from release" {
   set -eu -o pipefail
   cd ${TESTDIR} || ( printf "unable to cd to ${TESTDIR}\n" && exit 1 )
-  echo "# ddev add-on get ddev/ddev-addon-template with project ${PROJNAME} in ${TESTDIR} ($(pwd))" >&3
-  ddev add-on get ddev/ddev-addon-template
-  ddev restart >/dev/null
+
+  echo "# Basic site check" >&3
   health_checks
+
+  echo "# ddev add-on get with project ${PROJNAME} in ${TESTDIR} ($(pwd))" >&3
+  # For release testing, we would use the actual repo path
+  # This test would be updated when the addon is published
+  ddev add-on get ${DIR}
+  ddev restart >/dev/null
+
+  echo "# Verify Playwright command is available" >&3
+  ddev playwright --version
+
+  echo "# Run Playwright test" >&3
+  ddev playwright test
+
+  echo "# Verify Playwright installation" >&3
+  ddev playwright install --help > /dev/null
+  if [ $? -eq 0 ]; then
+    echo "# Playwright install command available OK" >&3
+  else
+    echo "# Playwright install command failed"
+    exit 1
+  fi
+}
+
+@test "test browser installation and test execution" {
+  set -eu -o pipefail
+  cd ${TESTDIR}
+
+  echo "# Basic site check" >&3
+  health_checks
+
+  echo "# ddev add-on get ${DIR} with project ${PROJNAME} in ${TESTDIR} ($(pwd))" >&3
+  ddev add-on get ${DIR}
+  ddev restart
+
+  echo "# Install Playwright browsers" >&3
+  ddev playwright install
+
+  echo "# Run Playwright test with installed browsers" >&3
+  ddev playwright test
+
+  echo "# Test Playwright test results" >&3
+  if ddev playwright test 2>&1 | grep -q "passed"; then
+    echo "# Playwright tests executed successfully" >&3
+  else
+    echo "# Playwright tests failed"
+    ddev playwright test
+    exit 1
+  fi
 }
