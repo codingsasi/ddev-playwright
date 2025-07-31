@@ -16,14 +16,9 @@ ddev restart
 After installation, you'll need to set up Playwright in your project if you haven't already:
 
 ```bash
-# Install node dependencies.
-ddev exec -d /var/www/html/test/playwright/ npm ci
-
 # Install Playwright in your project.
 ddev playwright install chrome chromium msedge firefox webkit --with-deps
 
-# Initialize Playwright config
-ddev exec npx playwright init
 ```
 
 ## Usage

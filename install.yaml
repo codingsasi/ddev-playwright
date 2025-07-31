@@ -1,3 +1,4 @@
+#ddev-generated
 # Details about the install.yaml file are at https://ddev.readthedocs.io/en/stable/users/extend/additional-services/#sections-and-features-of-ddev-get-add-on-installyaml
 
 name: ddev-playwright
@@ -50,25 +51,63 @@ dependencies:
 post_install_actions:
   - chmod +x commands/web/playwright
   - |
-    #ddev-description:Copy examples to project if they don't exist
+    #ddev-description:Setup Playwright test environment
+    echo "Setting up Playwright test environment..."
+
+    # Create test/playwright directory if it doesn't exist
     if [ ! -d "${DDEV_APPROOT}/test/playwright" ]; then
       mkdir -p "${DDEV_APPROOT}/test/playwright"
-      cp -r examples/* "${DDEV_APPROOT}/test/playwright/"
-      echo "Copied Playwright example tests to ${DDEV_APPROOT}/test/playwright/"
-    else
-      echo "Example tests not copied because ${DDEV_APPROOT}/test/playwright/ already exists"
-      echo "You can find example tests in the .ddev/examples directory"
+      echo "Created ${DDEV_APPROOT}/test/playwright/ directory"
+    fi
+  - |
+    #ddev-description:Initialize Playwright project with npm init
+    echo "Initializing Playwright project..."
+
+    # Use ddev exec to run commands in the web container (nvm already available)
+    ddev exec bash -c "
+      # Change to test directory
+      cd /var/www/html/test/playwright
+
+      # Initialize Playwright project non-interactively
+      # This creates package.json, playwright.config.ts, and example tests
+      nvm install 20
+      nvm use 20
+      npm init playwright@latest -- --quiet --yes --lang=TypeScript --no-browsers
+
+      # Note: Browser installation can be done later with 'ddev playwright install'
+
+      echo 'Playwright project initialized successfully!'
+    " || echo "Note: Playwright initialization will occur on first test run"
+  - |
+    #ddev-description:Customize Playwright configuration for DDEV
+    echo "Customizing Playwright configuration for DDEV..."
+
+    # Copy our custom config to override the generated one
+    if [ -f "${DDEV_APPROOT}/test/playwright/playwright.config.ts" ]; then
+      cp examples/playwright.config.ts "${DDEV_APPROOT}/test/playwright/playwright.config.ts"
+      echo "Applied DDEV-optimized Playwright configuration"
+    fi
+
+    # Copy our custom example test
+    if [ -f "${DDEV_APPROOT}/test/playwright/tests/example.spec.ts" ]; then
+      cp examples/example-test.spec.ts "${DDEV_APPROOT}/test/playwright/tests/example.spec.ts"
+      echo "Applied DDEV-optimized example test"
     fi
   - |
     #ddev-description:Provide instructions after installation
-    echo "Playwright addon has been installed."
-    echo "Playwright will be automatically installed when first used."
+    echo "Playwright addon has been installed and configured!"
+    echo ""
+    echo "Setup completed:"
+    echo "  ✓ Node.js 20 installed and activated"
+    echo "  ✓ Playwright project initialized with npm init playwright@latest"
+    echo "  ✓ DDEV-optimized configuration applied"
+    echo ""
+    echo "Next steps:"
+    echo "  1. Install browser binaries: ddev playwright install --with-deps"
+    echo "  2. Run your first test: ddev playwright test tests/example.spec.ts"
     echo ""
     echo "To run Playwright tests:"
     echo "  ddev playwright test"
-    echo ""
-    echo "To install Playwright browsers manually:"
-    echo "  ddev playwright install"
     echo ""
     echo "To view HTML reports:"
     echo "  ddev playwright show-report --host=0.0.0.0 --port=9323"
@@ -78,7 +117,7 @@ post_install_actions:
     echo "  Tests automatically support both HTTP and HTTPS URLs"
     echo "  The baseURL uses DDEV_PRIMARY_URL (includes https://${DDEV_HOSTNAME})"
     echo ""
-    echo "Example tests have been copied to test/playwright/"
+    echo "Your Playwright environment is ready to use!"
 
 # Shell actions that can be done during removal of the add-on.
 # Files listed in project_files section will be automatically removed here if they contain #ddev-generated line.

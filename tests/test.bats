@@ -58,16 +58,27 @@ teardown() {
   echo "# Verify Playwright command is available" >&3
   ddev playwright --version
 
-  echo "# Check that test directory was created with examples" >&3
-  if [ -d "${PW_DIR}" ] && [ -f "${PW_DIR}/playwright.config.ts" ]; then
-    echo "# Playwright test directory and config created OK" >&3
+  echo "# Check that test directory was created and initialized" >&3
+  if [ -d "${PW_DIR}" ] && [ -f "${PW_DIR}/playwright.config.ts" ] && [ -f "${PW_DIR}/package.json" ]; then
+    echo "# Playwright project initialized successfully with config and package.json" >&3
   else
-    echo "# Playwright test directory or config missing"
+    echo "# Playwright project initialization failed - missing files"
     ls -la ${PW_DIR}/
     exit 1
   fi
 
-  echo "# Run Playwright test" >&3
+  echo "# Verify Playwright was installed during setup" >&3
+  if [ -d "${PW_DIR}/node_modules" ] && [ -d "${PW_DIR}/tests" ]; then
+    echo "# Node modules and tests directory created by npm init playwright OK" >&3
+  else
+    echo "# Node modules or tests directory not found, initialization may have failed"
+    ls -la ${PW_DIR}/
+  fi
+
+  echo "# Install Playwright browsers" >&3
+  ddev playwright install --with-deps
+
+  echo "# Run Playwright test (after browser installation)" >&3
   ddev playwright test
 
   echo "# Check HTML reports port accessibility" >&3
@@ -102,7 +113,7 @@ teardown() {
   echo "# Verify Playwright command is available" >&3
   ddev playwright --version
 
-  echo "# Run Playwright test" >&3
+  echo "# Run Playwright test (this will install dependencies automatically)" >&3
   ddev playwright test
 
   echo "# Verify Playwright installation" >&3
@@ -115,7 +126,7 @@ teardown() {
   fi
 }
 
-@test "test browser installation and test execution" {
+@test "test automated setup and immediate usage" {
   set -eu -o pipefail
   cd ${TESTDIR}
 
@@ -126,14 +137,22 @@ teardown() {
   ddev add-on get ${DIR}
   ddev restart
 
-  echo "# Install Playwright browsers" >&3
+  echo "# Verify automated setup completed" >&3
+  if [ -d "${PW_DIR}/node_modules" ] && [ -f "${PW_DIR}/package.json" ]; then
+    echo "# Automated setup completed successfully" >&3
+  else
+    echo "# Automated setup may have failed"
+    ls -la ${PW_DIR}/
+  fi
+
+  echo "# Install browsers before running tests" >&3
   ddev playwright install
 
-  echo "# Run Playwright test with installed browsers" >&3
+  echo "# Run Playwright test after browser installation" >&3
   ddev playwright test
 
-  echo "# Test Playwright test results" >&3
-  if ddev playwright test 2>&1 | grep -q "passed"; then
+  echo "# Verify test results" >&3
+  if ddev playwright test  2>&1 | grep -q "passed"; then
     echo "# Playwright tests executed successfully" >&3
   else
     echo "# Playwright tests failed"

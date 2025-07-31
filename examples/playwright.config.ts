@@ -1,4 +1,3 @@
-#ddev-generated
 import { defineConfig, devices } from '@playwright/test';
 
 /**

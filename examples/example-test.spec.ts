@@ -1,4 +1,3 @@
-#ddev-generated
 import { test, expect } from '@playwright/test';
 
 // Example test that checks the homepage returns 200 status
@@ -14,23 +13,6 @@ test('homepage returns 200 status', async ({ page }) => {
 
   // Example of taking a screenshot
   await page.screenshot({ path: 'homepage.png' });
-});
-
-// Example of testing a form
-test('can fill out a simple form', async ({ page }) => {
-  // Go to the form page (adjust path as needed)
-  await page.goto('/contact');
-
-  // Fill out form fields
-  await page.getByLabel('Name').fill('Test User');
-  await page.getByLabel('Email').fill('test@example.com');
-  await page.getByLabel('Message').fill('This is a test message');
-
-  // Submit the form
-  await page.getByRole('button', { name: 'Submit' }).click();
-
-  // Check that submission was successful
-  await expect(page.getByText('Thank you')).toBeVisible();
 });
 
 // Notes:
