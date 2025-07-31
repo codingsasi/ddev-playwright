@@ -8,14 +8,10 @@
 
 set -e
 
-# Enter the Playwright container and run the command
-if [ $# -eq 0 ]; then
-  echo "Usage: ddev playwright [command]"
-  echo "Examples:"
-  echo "  ddev playwright test"
-  echo "  ddev playwright --help"
-  echo "  ddev playwright install"
-  exit 1
-fi
+cd test/playwright || exit 1
 
-docker exec -it ddev-${DDEV_SITENAME}-playwright npx playwright "$@"
+if [ -f yarn.lock ]; then
+  yarn && yarn playwright "$@"
+else
+  npm ci && npx playwright "$@"
+fi

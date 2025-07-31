@@ -21,8 +21,9 @@ pre_install_actions:
 # If you use directories, they must be directories that are managed
 # by this add-on, or removal could remove things that are not owned by it
 project_files:
-  - docker-compose.pw.yaml
+  - config.playwright.yaml
   - commands/web/playwright
+  - examples
 
 # List of files and directories that are copied into the global .ddev directory
 # DDEV environment variables can be interpolated into these filenames
@@ -50,31 +51,44 @@ post_install_actions:
   - chmod +x commands/web/playwright
   - |
     #ddev-description:Copy examples to project if they don't exist
-    if [ ! -d "${DDEV_APPROOT}/tests/e2e" ]; then
-      mkdir -p "${DDEV_APPROOT}/tests/e2e"
-      cp -r ../examples/* "${DDEV_APPROOT}/tests/e2e/"
-      echo "Copied Playwright example tests to ${DDEV_APPROOT}/tests/e2e/"
+    if [ ! -d "${DDEV_APPROOT}/test/playwright" ]; then
+      mkdir -p "${DDEV_APPROOT}/test/playwright"
+      cp -r examples/* "${DDEV_APPROOT}/test/playwright/"
+      echo "Copied Playwright example tests to ${DDEV_APPROOT}/test/playwright/"
     else
-      echo "Example tests not copied because ${DDEV_APPROOT}/tests/e2e/ already exists"
-      echo "You can find example tests in the addon GitHub repository"
+      echo "Example tests not copied because ${DDEV_APPROOT}/test/playwright/ already exists"
+      echo "You can find example tests in the .ddev/examples directory"
     fi
   - |
     #ddev-description:Provide instructions after installation
     echo "Playwright addon has been installed."
-    echo "To run Playwright tests, use:"
-    echo "  ddev restart"
+    echo "Playwright will be automatically installed when first used."
+    echo ""
+    echo "To run Playwright tests:"
     echo "  ddev playwright test"
-    echo "To install Playwright in your project:"
+    echo ""
+    echo "To install Playwright browsers manually:"
     echo "  ddev playwright install"
+    echo ""
+    echo "To view HTML reports:"
+    echo "  ddev playwright show-report --host=0.0.0.0 --port=9323"
+    echo "  Then visit: http://${DDEV_HOSTNAME}:9323"
+    echo ""
+    echo "HTTPS Support:"
+    echo "  Tests automatically support both HTTP and HTTPS URLs"
+    echo "  The baseURL uses DDEV_PRIMARY_URL (includes https://${DDEV_HOSTNAME})"
+    echo ""
+    echo "Example tests have been copied to test/playwright/"
 
 # Shell actions that can be done during removal of the add-on.
 # Files listed in project_files section will be automatically removed here if they contain #ddev-generated line.
 # removal_actions are executed in the context of the target project's .ddev directory.
 removal_actions:
   - |
-    #ddev-description:Remove container
-    ddev exec docker stop ddev-${DDEV_SITENAME}-playwright 2>/dev/null || true
-    ddev exec docker rm ddev-${DDEV_SITENAME}-playwright 2>/dev/null || true
+    #ddev-description:Clean up Playwright installation
+    echo "Playwright addon has been removed."
+    echo "Note: Playwright binaries remain installed in the web container."
+    echo "To completely remove Playwright, you may need to rebuild your web container."
 
 # Advanced usage - YAML files can be read in and then used as go template actions
 # in pre_install_actions and post_install_actions

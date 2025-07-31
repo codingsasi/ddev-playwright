@@ -1,17 +1,13 @@
+#ddev-generated
 import { test, expect } from '@playwright/test';
 
-// Example test that visits the homepage of the DDEV site
-test('homepage has correct title', async ({ page }) => {
-  // Navigate to the homepage
-  await page.goto('/');
+// Example test that checks the homepage returns 200 status
+test('homepage returns 200 status', async ({ page }) => {
+  // Navigate to the homepage and check response status
+  const response = await page.goto('/');
 
-  // You can use an explicit URL if needed
-  // await page.goto('http://web');
-  // Or use the DDEV_PRIMARY_URL environment variable
-  // await page.goto(process.env.DDEV_PRIMARY_URL || 'http://web');
-
-  // Check that the page has loaded
-  await expect(page).toHaveTitle(/Home|Welcome|Index/);
+  // Verify the page loaded successfully
+  expect(response?.status()).toBe(200);
 
   // Example of taking a screenshot
   await page.screenshot({ path: 'homepage.png' });

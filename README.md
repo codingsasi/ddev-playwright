@@ -7,7 +7,7 @@ This is a DDEV addon that provides a Playwright testing environment for your DDE
 ## Installation
 
 ```bash
-ddev get yourusername/ddev-playwright
+ddev add-on get codingsasi/ddev-playwright
 ddev restart
 ```
 
@@ -16,8 +16,11 @@ ddev restart
 After installation, you'll need to set up Playwright in your project if you haven't already:
 
 ```bash
-# Install Playwright in your project
-ddev playwright install
+# Install node dependencies.
+ddev exec -d /var/www/html/test/playwright/ npm ci
+
+# Install Playwright in your project.
+ddev playwright install chrome chromium msedge firefox webkit --with-deps
 
 # Initialize Playwright config
 ddev exec npx playwright init
@@ -30,9 +33,6 @@ You can run Playwright commands directly using the `ddev playwright` command:
 ```bash
 # Run Playwright tests
 ddev playwright test
-
-# Run Playwright tests with UI
-ddev playwright test --ui
 
 # Show Playwright help
 ddev playwright --help
@@ -49,7 +49,7 @@ import { test, expect } from '@playwright/test';
 test('basic test', async ({ page }) => {
   // Using the DDEV_PRIMARY_URL environment variable
   await page.goto(process.env.DDEV_PRIMARY_URL || 'http://web');
-  
+
   // Rest of your test...
 });
 ```
