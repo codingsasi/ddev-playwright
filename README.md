@@ -1,6 +1,6 @@
 # ddev-playwright
 
-[![tests](https://github.com/codingsasi/ddev-playwright/actions/workflows/tests.yml/badge.svg)](https://github.com/codingsasi/ddev-playwright/actions/workflows/tests.yml) ![project is maintained](https://img.shields.io/maintenance/yes/2024.svg)
+[![tests](https://github.com/codingsasi/ddev-playwright/actions/workflows/tests.yml/badge.svg)](https://github.com/codingsasi/ddev-playwright/actions/workflows/tests.yml) ![project is maintained](https://img.shields.io/maintenance/yes/2025.svg)
 
 This is a DDEV addon that provides a Playwright testing environment for your DDEV projects.
 
@@ -58,4 +58,4 @@ You can customize the Playwright configuration by editing the `playwright.config
 
 Feel free to submit issues or pull requests with improvements.
 
-**Contributed and maintained by [Your Name/Username]**
+**Contributed and maintained by [Abhai Sasidharan/codingsasi]**
