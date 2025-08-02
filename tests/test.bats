@@ -80,7 +80,13 @@ teardown() {
   ddev playwright install-deps
 
   echo "# Run Playwright test (after browser installation)" >&3
-  ddev playwright test
+  if ddev playwright test 2>/dev/null; then
+    echo "# Playwright tests passed successfully" >&3
+  else
+    echo "# Playwright tests failed"
+    ddev playwright test  # Re-run to show output for debugging
+    exit 1
+  fi
 
   echo "# Check HTML reports port accessibility" >&3
   # Start the report server in background and test it
@@ -114,8 +120,18 @@ teardown() {
   echo "# Verify Playwright command is available" >&3
   ddev playwright --version
 
-  echo "# Run Playwright test (this will install dependencies automatically)" >&3
-  ddev playwright test
+  echo "# Install browsers and dependencies before running tests" >&3
+  ddev playwright install-deps
+  ddev playwright install
+
+  echo "# Run Playwright test (after browser installation)" >&3
+  if ddev playwright test 2>/dev/null; then
+    echo "# Playwright tests passed successfully" >&3
+  else
+    echo "# Playwright tests failed"
+    ddev playwright test  # Re-run to show output for debugging
+    exit 1
+  fi
 
   echo "# Verify Playwright installation" >&3
   ddev playwright install --help > /dev/null
@@ -151,14 +167,11 @@ teardown() {
   ddev playwright install-deps
 
   echo "# Run Playwright test after browser installation" >&3
-  ddev playwright test
-
-  echo "# Verify test results" >&3
-  if ddev playwright test  2>&1 | grep -q "passed"; then
+  if ddev playwright test 2>/dev/null; then
     echo "# Playwright tests executed successfully" >&3
   else
     echo "# Playwright tests failed"
-    ddev playwright test
+    ddev playwright test  # Re-run to show output for debugging
     exit 1
   fi
 }
