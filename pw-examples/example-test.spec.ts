@@ -4,15 +4,10 @@ import { test, expect } from '@playwright/test';
 test('homepage returns 200 status', async ({ page }) => {
   // Navigate to the homepage and check response status
   const response = await page.goto('/');
-
   // Verify the page loaded successfully
   expect(response?.status()).toBe(200);
-
   // Check that the page has the expected content
   await expect(page.getByRole('heading', { name: 'The way is clear!' })).toBeVisible();
-
-  // Example of taking a screenshot
-  await page.screenshot({ path: 'homepage.png' });
 });
 
 // Notes:

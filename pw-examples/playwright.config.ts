@@ -15,7 +15,7 @@ export default defineConfig({
   use: {
     baseURL: process.env.DDEV_PRIMARY_URL || 'http://web',
     trace: 'on-first-retry',
-    screenshot: 'only-on-failure',
+    screenshot: 'on',
     ignoreHTTPSErrors: true,
   },
 
