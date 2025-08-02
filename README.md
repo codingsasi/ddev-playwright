@@ -1,6 +1,6 @@
 # ddev-playwright
 
-[![tests](https://github.com/yourusername/ddev-playwright/actions/workflows/tests.yml/badge.svg)](https://github.com/yourusername/ddev-playwright/actions/workflows/tests.yml) ![project is maintained](https://img.shields.io/maintenance/yes/2024.svg)
+[![tests](https://github.com/codingsasi/ddev-playwright/actions/workflows/tests.yml/badge.svg)](https://github.com/codingsasi/ddev-playwright/actions/workflows/tests.yml) ![project is maintained](https://img.shields.io/maintenance/yes/2024.svg)
 
 This is a DDEV addon that provides a Playwright testing environment for your DDEV projects.
 
@@ -16,8 +16,9 @@ ddev restart
 After installation, you'll need to set up Playwright in your project if you haven't already:
 
 ```bash
-# Install Playwright in your project.
-ddev playwright install chrome chromium msedge firefox webkit --with-deps
+# Install Playwright dependencies and browsers in your project.
+ddev playwright install-deps
+ddev playwright install
 
 ```
 
