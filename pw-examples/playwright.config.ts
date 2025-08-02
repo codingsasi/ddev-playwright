@@ -11,7 +11,8 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: [['html', { open: 'never', host: '0.0.0.0', port: 9323 }]],
-
+  globalSetup: require.resolve('./tests/global-setup'),
+  globalTeardown: require.resolve('./tests/global-teardown'),
   use: {
     baseURL: process.env.DDEV_PRIMARY_URL || 'http://web',
     trace: 'on-first-retry',

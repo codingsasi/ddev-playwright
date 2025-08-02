@@ -50,12 +50,56 @@ test('basic test', async ({ page }) => {
 });
 ```
 
+## Global Setup and Teardown
+
+I've included config to have playwright's global setup and teardown hooks. This allows you to run code once before all tests begin and once after all tests complete. This is useful for:
+
+- **Global Setup**: Database seeding, user creation, service initialization, cache warming
+- **Global Teardown**: Cleanup operations, test data removal, service shutdown
+
+These hooks run independently of individual test files and are executed in a separate Node.js process.
+
+### Configuration Files
+
+#### `global-setup.ts`
+Runs **before** all tests execute. The included setup file demonstrates:
+- Environment detection (CI vs DDEV vs host)
+- Running drush commands in different environments
+
+#### `global-teardown.ts`
+Runs **after** all tests complete. The included teardown file demonstrates:
+- Running cleanup commands based on environment
+
+### Environment Detection
+
+Both files automatically detect the execution environment:
+
+- **CI Environment** (`process.env.CI`): Uses platform CLI commands for cloud hosting
+- **DDEV Container** (`process.env.IS_DDEV_PROJECT`): Runs drush commands directly
+- **Host Machine**: Prefixes commands with `ddev` to execute in the container
+
+### Customization
+
+Edit these files to match your project's needs:
+
+```typescript
+// Example: Custom setup for your application
+execSync('drush user:create testuser --password=testpass', { stdio: 'inherit' });
+execSync('drush config:set system.site page.front /custom-page', { stdio: 'inherit' });
+```
+
+The global hooks are automatically configured in `playwright.config.ts` and will run whenever you execute `ddev playwright test`.
+
 ## Customizing
 
-You can customize the Playwright configuration by editing the `playwright.config.ts` or `playwright.config.js` file in your project.
+You can customize the Playwright configuration by editing the `playwright.config.ts` file in your project. TypeScript is enforced by initializing playwright with ts when add-on is installed because it brings order to lawless world of JavaScript.
 
 ## Contributing
 
 Feel free to submit issues or pull requests with improvements.
 
 **Contributed and maintained by [Abhai Sasidharan/codingsasi]**
+
+## Notes
+
+This is a very lightweight playwright ddev addon, if you want a more advanced playwright integration into ddev, use "https://github.com/Lullabot/ddev-playwright" or "https://github.com/julienloizelet/ddev-playwright". They have a VNC running inside ddev that is capable of --ui. Using my add-on, if you want the --ui to work, you'll have to run it outside of ddev which is quite easy. See the global-setup.ts and global-teardown.ts files. See more about UI mode here: https://playwright.dev/docs/test-ui-mode.

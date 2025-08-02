@@ -91,6 +91,8 @@ post_install_actions:
     # Copy our custom example test
     if [ -f "${DDEV_APPROOT}/test/playwright/tests/example.spec.ts" ]; then
       cp pw-examples/example-test.spec.ts "${DDEV_APPROOT}/test/playwright/tests/example.spec.ts"
+      cp pw-examples/global-setup.ts "${DDEV_APPROOT}/test/playwright/global-setup.ts"
+      cp pw-examples/global-teardown.ts "${DDEV_APPROOT}/test/playwright/global-teardown.ts"
       echo "Applied DDEV-optimized example test"
     fi
   - |
