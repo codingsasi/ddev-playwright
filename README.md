@@ -1,6 +1,6 @@
 # ddev-playwright
 
-[![tests](https://github.com/codingsasi/ddev-playwright/actions/workflows/tests.yml/badge.svg)](https://github.com/codingsasi/ddev-playwright/actions/workflows/tests.yml) ![project is maintained](https://img.shields.io/maintenance/yes/2025.svg)
+[![tests](https://github.com/codingsasi/ddev-playwright/actions/workflows/tests.yml/badge.svg)](https://github.com/codingsasi/ddev-playwright/actions/workflows/tests.yml) ![project is maintained](https://img.shields.io/maintenance/yes/2025.svg) [![ddev-get registry](https://img.shields.io/badge/ddev--get-registry-blue)](https://ddev.readthedocs.io/en/stable/users/extend/additional-services/) ![release](https://img.shields.io/github/v/release/codingsasi/ddev-playwright?label=latest%20release)
 
 This is a DDEV addon that provides a Playwright testing environment for your DDEV projects.
 
