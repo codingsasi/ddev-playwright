@@ -72,7 +72,7 @@ post_install_actions:
       # This creates package.json, playwright.config.ts, and example tests
       nvm install 20
       nvm use 20
-      npm init playwright@latest -- --quiet --yes --lang=TypeScript --no-browsers
+      echo 'n' | npm init playwright@latest -- --quiet --yes --lang=TypeScript --no-browsers
 
       # Note: Browser installation can be done later with 'ddev playwright install' and 'ddev playwright install-deps'
 
