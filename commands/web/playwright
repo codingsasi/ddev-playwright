@@ -1,14 +1,27 @@
 #!/bin/bash
 #ddev-generated
 
-## Description: Run Playwright tests inside the Playwright container
+## Description: Run Playwright tests with persistent browser installation
 ## Usage: playwright [flags] [args]
 ## Example: "ddev playwright --help" or "ddev playwright test"
 ## ExecRaw: true
 
 set -e
 
+# Ensure we're using the persistent browser installation
+export PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers
+
+# Check if browsers are installed
+if [ ! -f /opt/playwright-browsers/.installed ]; then
+    echo "⚠️  Playwright browsers not found!"
+    echo "Please run: ddev install-playwright"
+    exit 1
+fi
+nvm use 22
 cd test/playwright || exit 1
+
+# Skip browser download since we have them pre-installed
+export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 
 if [ -f yarn.lock ]; then
   yarn && yarn playwright "$@"

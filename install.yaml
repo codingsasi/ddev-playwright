@@ -24,6 +24,8 @@ pre_install_actions:
 project_files:
   - config.playwright.yaml
   - commands/web/playwright
+  - commands/web/install-playwright
+  - web-build/Dockerfile.playwright
   - pw-examples
 
 # List of files and directories that are copied into the global .ddev directory
@@ -50,6 +52,7 @@ dependencies:
 # post_install_actions are executed in the context of the target project's .ddev directory.
 post_install_actions:
   - chmod +x commands/web/playwright
+  - chmod +x commands/web/install-playwright
   - |
     #ddev-description:Setup Playwright test environment
     echo "Setting up Playwright test environment..."
@@ -70,8 +73,8 @@ post_install_actions:
 
       # Initialize Playwright project non-interactively
       # This creates package.json, playwright.config.ts, and example tests
-      nvm install 20
-      nvm use 20
+      nvm install 22
+      nvm use 22
       echo 'n' | npm init playwright@latest -- --quiet --yes --lang=TypeScript --no-browsers
 
       # Note: Browser installation can be done later with 'ddev playwright install' and 'ddev playwright install-deps'
@@ -100,15 +103,21 @@ post_install_actions:
     echo "Playwright addon has been installed and configured!"
     echo ""
     echo "Setup completed:"
-    echo "  ✓ Node.js 20 installed and activated"
+    echo "  ✓ Node.js 22 installed and activated"
     echo "  ✓ Playwright project initialized with npm init playwright@latest"
     echo "  ✓ DDEV-optimized configuration applied"
+    echo "  ✓ Persistent browser installation configured"
+    echo ""
+    echo "IMPORTANT: The web container will now be rebuilt with Playwright browsers"
+    echo "pre-installed. This is a one-time build that persists across restarts."
     echo ""
     echo "Next steps:"
-    echo "  1. ddev restart # if you haven't already"
-    echo "  2. Install system dependencies: ddev playwright install-deps"
-    echo "  3. Install browser binaries: ddev playwright install"
-    echo "  4. Run your first test: ddev playwright test tests/example.spec.ts"
+    echo "  1. ddev restart # REQUIRED to build the new web container with Playwright"
+    echo "  2. ddev install-playwright # Verify browser installation (optional)"
+    echo "  3. Run your first test: ddev playwright test tests/example.spec.ts"
+    echo ""
+    echo "The first restart will take longer as it builds Playwright browsers into"
+    echo "the Docker image. Subsequent restarts will be fast."
     echo ""
     echo "To run Playwright tests:"
     echo "  ddev playwright test"
@@ -117,7 +126,7 @@ post_install_actions:
     echo "  ddev playwright show-report --host=0.0.0.0"
     echo "  Then visit: http://${DDEV_HOSTNAME}:9323"
     echo ""
-    echo "Your Playwright environment is ready to use!"
+    echo "Your Playwright environment with persistent browsers is ready!"
 
 # Shell actions that can be done during removal of the add-on.
 # Files listed in project_files section will be automatically removed here if they contain #ddev-generated line.

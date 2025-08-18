@@ -8,17 +8,26 @@ This is a DDEV addon that provides a Playwright testing environment for your DDE
 
 ```bash
 ddev add-on get codingsasi/ddev-playwright
-ddev restart
+ddev restart  # This will build Playwright browsers into the Docker image
 ```
+
+## How It Works
+
+This addon builds Playwright browsers directly into the DDEV web container Docker image. This means:
+- **Browsers persist across DDEV restarts** - No need to reinstall after `ddev restart`
+- **Faster startup times** - Browsers are pre-installed in the image
+- **No runtime downloads** - Everything is ready to use immediately
+- **Consistent environment** - All team members get the same browser versions
+
+The first `ddev restart` after installation will take longer (5-10 minutes) as it builds the browsers into the Docker image. Subsequent restarts will be fast.
 
 ## Configuration
 
-After installation, you'll need to set up Playwright in your project if you haven't already:
+After installation, browsers are already installed. You can verify the installation:
 
 ```bash
-# Install Playwright dependencies and browsers in your project.
-ddev playwright install-deps
-ddev playwright install
+# Verify Playwright and browser installation (optional)
+ddev install-playwright
 
 ```
 

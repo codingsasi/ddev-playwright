@@ -1,0 +1,55 @@
+#!/bin/bash
+#ddev-generated
+## Description: Install Playwright browsers and system dependencies
+## Usage: install-playwright
+## Example: "ddev install-playwright"
+
+set -e
+
+echo "Installing Playwright browsers and dependencies..."
+
+# Check if browsers are already installed
+if [ -f /opt/playwright-browsers/.installed ]; then
+    echo "✓ Playwright browsers are already installed at /opt/playwright-browsers"
+else
+    echo "Installing Playwright browsers..."
+
+    # Ensure Node.js is available
+    if ! command -v node &> /dev/null; then
+        echo "Node.js not found. Installing Node.js 22..."
+        nvm install 22
+        nvm use 22
+    fi
+
+    # Install Playwright globally if not already installed
+    if ! command -v playwright &> /dev/null; then
+        echo "Installing Playwright globally..."
+        npm install -g playwright@latest
+    fi
+
+    # Install browsers to the persistent location
+    echo "Downloading browser binaries..."
+    npx playwright install chromium firefox webkit
+
+    # Mark as installed
+    touch /opt/playwright-browsers/.installed
+
+    echo "✓ Playwright browsers installed successfully!"
+fi
+
+# Verify installation
+echo ""
+echo "Verifying Playwright installation..."
+npx playwright --version
+
+echo ""
+echo "Installed browsers:"
+npx playwright install --list
+
+echo ""
+echo "✓ Playwright is ready to use!"
+echo ""
+echo "Next steps:"
+echo "  1. Run tests: ddev playwright test"
+echo "  2. Generate code: ddev playwright codegen"
+echo "  3. View report: ddev playwright show-report --host=0.0.0.0"

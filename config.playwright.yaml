@@ -1,10 +1,32 @@
 #ddev-generated
+# Playwright configuration for DDEV
+# This config builds Playwright browsers into the web container image
+
+# Use custom Dockerfile to build Playwright into the image
+web_build:
+  - web-build/Dockerfile.playwright
+
+# Expose Playwright test report server port
 web_extra_exposed_ports:
   - name: playwright
     container_port: 9323
     http_port: 9323
     https_port: 9324
 
-# https://playwright.dev/docs/browsers#hermetic-install
+# Set environment variables for Playwright
 web_environment:
-  - PLAYWRIGHT_BROWSERS_PATH=0
+  - PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers
+  - PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1  # Skip download since browsers are pre-installed
+
+# Create a volume to persist npm cache (optional, helps with npm install speed)
+additional_hostnames: []
+
+# Hook to ensure browsers are available
+hooks:
+  post-start:
+    - exec: |
+        if [ ! -f /opt/playwright-browsers/.installed ]; then
+          echo "Playwright browsers not found. Installing..."
+          npx playwright install chromium firefox webkit
+          touch /opt/playwright-browsers/.installed
+        fi
