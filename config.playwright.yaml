@@ -4,3 +4,9 @@ web_extra_exposed_ports:
     container_port: 9323
     http_port: 9323
     https_port: 9324
+
+# Persistent volume for Playwright browser cache
+volumes:
+  - name: playwright-cache
+    host_path: .ddev/playwright-cache
+    container_path: ~/.cache/ms-playwright
