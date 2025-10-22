@@ -25,6 +25,8 @@ export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 
 if [ -f yarn.lock ]; then
   yarn && yarn playwright "$@"
-else
+elif [ -f package-lock.json ]; then
   npm ci && npx playwright "$@"
+else
+  npm install && npx playwright "$@"
 fi

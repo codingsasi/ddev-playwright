@@ -21,10 +21,21 @@ else
         nvm use 22
     fi
 
-    # Install Playwright globally if not already installed
-    if ! command -v playwright &> /dev/null; then
-        echo "Installing Playwright globally..."
-        npm install -g playwright@latest
+    # Install Playwright locally in the project if not already installed
+    cd /var/www/html/test/playwright
+    if [ ! -f package.json ]; then
+        echo "Initializing Playwright project first..."
+        nvm use 22
+        echo 'n' | npm init playwright@latest -- --quiet --lang=TypeScript --no-browsers || {
+          echo 'Playwright init failed, trying alternative approach...'
+          npm init -y
+          npm install @playwright/test@latest
+          npx playwright init --yes --lang=TypeScript --no-browsers
+        }
+    else
+        # Install Playwright dependencies
+        echo "Installing Playwright dependencies..."
+        npm install @playwright/test@latest
     fi
 
     # Install browsers to the persistent location
@@ -40,11 +51,27 @@ fi
 # Verify installation
 echo ""
 echo "Verifying Playwright installation..."
-npx playwright --version
-
-echo ""
-echo "Installed browsers:"
-npx playwright install --list
+cd /var/www/html/test/playwright
+if [ -f package.json ]; then
+    # Ensure we're using the correct Node.js version
+    nvm use 22
+    # Check if Playwright is installed in the project
+    if [ -d "node_modules/@playwright" ]; then
+        npx playwright --version
+        echo ""
+        echo "Installed browsers:"
+        npx playwright install --list
+    else
+        echo "⚠️  Playwright not installed in project. Installing dependencies..."
+        npm install @playwright/test@latest
+        npx playwright --version
+        echo ""
+        echo "Installed browsers:"
+        npx playwright install --list
+    fi
+else
+    echo "⚠️  Playwright project not found. Please run 'ddev playwright' first to initialize the project."
+fi
 
 echo ""
 echo "✓ Playwright is ready to use!"
