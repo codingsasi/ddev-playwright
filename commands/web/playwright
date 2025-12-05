@@ -17,7 +17,15 @@ if [ ! -f /opt/playwright-browsers/.installed ]; then
     echo "Please run: ddev install-playwright"
     exit 1
 fi
-nvm use 22
+
+# Use Node.js 22 if available via nvm, otherwise use system Node.js
+if command -v nvm &> /dev/null; then
+    nvm use 22 2>/dev/null || true
+elif [ -f ~/.nvm/nvm.sh ]; then
+    source ~/.nvm/nvm.sh
+    nvm use 22 2>/dev/null || true
+fi
+
 cd test/playwright || exit 1
 
 # Skip browser download since we have them pre-installed

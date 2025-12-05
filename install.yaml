@@ -66,15 +66,23 @@ post_install_actions:
     #ddev-description:Initialize Playwright project with npm init
     echo "Initializing Playwright project..."
 
-    # Use ddev exec to run commands in the web container (nvm already available)
+    # Use ddev exec to run commands in the web container
     ddev exec bash -c "
       # Change to test directory
       cd /var/www/html/test/playwright
 
+      # Try to use Node.js 22 via nvm if available, otherwise use system Node.js
+      if command -v nvm &> /dev/null; then
+        nvm install 22 2>/dev/null || true
+        nvm use 22 2>/dev/null || true
+      elif [ -f ~/.nvm/nvm.sh ]; then
+        source ~/.nvm/nvm.sh
+        nvm install 22 2>/dev/null || true
+        nvm use 22 2>/dev/null || true
+      fi
+
       # Initialize Playwright project non-interactively
       # This creates package.json, playwright.config.ts, and example tests
-      nvm install 22
-      nvm use 22
       echo 'n' | npm init playwright@latest -- --quiet --lang=TypeScript --no-browsers || {
         echo 'Playwright init failed, trying alternative approach...'
         npm init -y
@@ -90,17 +98,23 @@ post_install_actions:
     #ddev-description:Customize Playwright configuration for DDEV
     echo "Customizing Playwright configuration for DDEV..."
 
+    # Ensure tests directory exists (required for global setup/teardown)
+    mkdir -p "${DDEV_APPROOT}/test/playwright/tests"
+
     # Copy our custom config to override the generated one
     if [ -f "${DDEV_APPROOT}/test/playwright/playwright.config.ts" ]; then
       cp pw-examples/playwright.config.ts "${DDEV_APPROOT}/test/playwright/playwright.config.ts"
       echo "Applied DDEV-optimized Playwright configuration"
     fi
 
-    # Copy our custom example test
+    # Always copy global setup/teardown files (required by playwright.config.ts)
+    cp pw-examples/global-setup.ts "${DDEV_APPROOT}/test/playwright/tests/global-setup.ts"
+    cp pw-examples/global-teardown.ts "${DDEV_APPROOT}/test/playwright/tests/global-teardown.ts"
+    echo "Applied global setup and teardown files"
+
+    # Copy our custom example test if the tests directory was created by npm init
     if [ -f "${DDEV_APPROOT}/test/playwright/tests/example.spec.ts" ]; then
       cp pw-examples/example-test.spec.ts "${DDEV_APPROOT}/test/playwright/tests/example.spec.ts"
-      cp pw-examples/global-setup.ts "${DDEV_APPROOT}/test/playwright/tests/global-setup.ts"
-      cp pw-examples/global-teardown.ts "${DDEV_APPROOT}/test/playwright/tests/global-teardown.ts"
       echo "Applied DDEV-optimized example test"
     fi
   - |

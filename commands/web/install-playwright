@@ -16,16 +16,34 @@ else
 
     # Ensure Node.js is available
     if ! command -v node &> /dev/null; then
-        echo "Node.js not found. Installing Node.js 22..."
-        nvm install 22
-        nvm use 22
+        echo "Node.js not found. Attempting to use nvm..."
+        if command -v nvm &> /dev/null; then
+            nvm install 22
+            nvm use 22
+        elif [ -f ~/.nvm/nvm.sh ]; then
+            source ~/.nvm/nvm.sh
+            nvm install 22
+            nvm use 22
+        else
+            echo "⚠️  nvm not available. Using system Node.js if available."
+            if ! command -v node &> /dev/null; then
+                echo "❌ Node.js is required but not found. Please install Node.js 22."
+                exit 1
+            fi
+        fi
     fi
 
     # Install Playwright locally in the project if not already installed
     cd /var/www/html/test/playwright
     if [ ! -f package.json ]; then
         echo "Initializing Playwright project first..."
-        nvm use 22
+        # Try to use Node.js 22 via nvm if available
+        if command -v nvm &> /dev/null; then
+            nvm use 22 2>/dev/null || true
+        elif [ -f ~/.nvm/nvm.sh ]; then
+            source ~/.nvm/nvm.sh
+            nvm use 22 2>/dev/null || true
+        fi
         echo 'n' | npm init playwright@latest -- --quiet --lang=TypeScript --no-browsers || {
           echo 'Playwright init failed, trying alternative approach...'
           npm init -y
@@ -54,7 +72,12 @@ echo "Verifying Playwright installation..."
 cd /var/www/html/test/playwright
 if [ -f package.json ]; then
     # Ensure we're using the correct Node.js version
-    nvm use 22
+    if command -v nvm &> /dev/null; then
+        nvm use 22 2>/dev/null || true
+    elif [ -f ~/.nvm/nvm.sh ]; then
+        source ~/.nvm/nvm.sh
+        nvm use 22 2>/dev/null || true
+    fi
     # Check if Playwright is installed in the project
     if [ -d "node_modules/@playwright" ]; then
         npx playwright --version

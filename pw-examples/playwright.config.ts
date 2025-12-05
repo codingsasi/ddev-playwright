@@ -3,6 +3,9 @@ import { defineConfig, devices } from '@playwright/test';
 /**
  * Example Playwright config for DDEV
  */
+const baseURL = process.env.DDEV_PRIMARY_URL || 'https://your.ddev.site';
+console.log(`[Playwright Config] baseURL set to: ${baseURL}`);
+
 export default defineConfig({
   testDir: './tests',
   timeout: 30 * 1000,
@@ -14,7 +17,7 @@ export default defineConfig({
   globalSetup: require.resolve('./tests/global-setup'),
   globalTeardown: require.resolve('./tests/global-teardown'),
   use: {
-    baseURL: process.env.DDEV_PRIMARY_URL || 'http://web',
+    baseURL: baseURL,
     trace: 'on-first-retry',
     screenshot: 'on',
     ignoreHTTPSErrors: true,

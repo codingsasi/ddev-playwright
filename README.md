@@ -45,7 +45,7 @@ ddev playwright --help
 
 ## Accessing the Web Application from Tests
 
-Your tests can access the web application using the hostname `web` or the DDEV_PRIMARY_URL environment variable:
+Your tests can access the DDEV_PRIMARY_URL environment variable:
 
 ```javascript
 // Example test
@@ -53,11 +53,27 @@ import { test, expect } from '@playwright/test';
 
 test('basic test', async ({ page }) => {
   // Using the DDEV_PRIMARY_URL environment variable
-  await page.goto(process.env.DDEV_PRIMARY_URL || 'http://web');
+  await page.goto(process.env.DDEV_PRIMARY_URL || 'https://your.ddev.site');
 
   // Rest of your test...
 });
 ```
+
+### Running in --ui mode (outside ddev container)
+```bash
+# From project root
+cd test/playwright # Go into playwright folder
+nvm use 22
+npm ci
+npx playwright install # Works best on Windows, Mac and Ubuntu (and possibly other Debian based distros). I had trouble with Fedora/Manjaro but not impossible.
+npx playwright test --ui
+```
+
+This will open up the playwright UI which you can use to run tests manually. See screenshot below.
+
+![Playwright UI Screenshot](assets/playwright-ui-screenshot.png)
+
+You should also update [`playwright.config.ts`](pw-examples/playwright.config.ts#L6) with your ddev base url: `const baseURL = process.env.DDEV_PRIMARY_URL || 'https://your.ddev.site';`
 
 ## Global Setup and Teardown
 
