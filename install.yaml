@@ -42,7 +42,7 @@ global_files:
 # See https://github.com/Masterminds/semver#checking-version-constraints for constraint rules.
 # Available with DDEV v1.23.4+, and works only for DDEV v1.23.4+ binaries
 # example: ddev_version_constraint: '>= v1.23.4'
-ddev_version_constraint: ''
+ddev_version_constraint: ""
 
 # List of add-on names that this add-on depends on
 dependencies:
@@ -57,10 +57,10 @@ post_install_actions:
     #ddev-description:Setup Playwright test environment
     echo "Setting up Playwright test environment..."
 
-    # Create test/playwright directory if it doesn't exist
-    if [ ! -d "${DDEV_APPROOT}/test/playwright" ]; then
-      mkdir -p "${DDEV_APPROOT}/test/playwright"
-      echo "Created ${DDEV_APPROOT}/test/playwright/ directory"
+    # Create tests/Playwright directory if it doesn't exist
+    if [ ! -d "${DDEV_APPROOT}/tests/Playwright" ]; then
+      mkdir -p "${DDEV_APPROOT}/tests/Playwright"
+      echo "Created ${DDEV_APPROOT}/tests/Playwright/ directory"
     fi
   - |
     #ddev-description:Initialize Playwright project with npm init
@@ -69,7 +69,7 @@ post_install_actions:
     # Use ddev exec to run commands in the web container
     ddev exec bash -c "
       # Change to test directory
-      cd /var/www/html/test/playwright
+      cd /var/www/html/tests/Playwright
 
       # Try to use Node.js 22 via nvm if available, otherwise use system Node.js
       if command -v nvm &> /dev/null; then
@@ -99,22 +99,22 @@ post_install_actions:
     echo "Customizing Playwright configuration for DDEV..."
 
     # Ensure tests directory exists (required for global setup/teardown)
-    mkdir -p "${DDEV_APPROOT}/test/playwright/tests"
+    mkdir -p "${DDEV_APPROOT}/tests/Playwright/tests"
 
     # Copy our custom config to override the generated one
-    if [ -f "${DDEV_APPROOT}/test/playwright/playwright.config.ts" ]; then
-      cp pw-examples/playwright.config.ts "${DDEV_APPROOT}/test/playwright/playwright.config.ts"
+    if [ -f "${DDEV_APPROOT}/tests/Playwright/playwright.config.ts" ]; then
+      cp pw-examples/playwright.config.ts "${DDEV_APPROOT}/tests/Playwright/playwright.config.ts"
       echo "Applied DDEV-optimized Playwright configuration"
     fi
 
     # Always copy global setup/teardown files (required by playwright.config.ts)
-    cp pw-examples/global-setup.ts "${DDEV_APPROOT}/test/playwright/tests/global-setup.ts"
-    cp pw-examples/global-teardown.ts "${DDEV_APPROOT}/test/playwright/tests/global-teardown.ts"
+    cp pw-examples/global-setup.ts "${DDEV_APPROOT}/tests/Playwright/tests/global-setup.ts"
+    cp pw-examples/global-teardown.ts "${DDEV_APPROOT}/tests/Playwright/tests/global-teardown.ts"
     echo "Applied global setup and teardown files"
 
     # Copy our custom example test if the tests directory was created by npm init
-    if [ -f "${DDEV_APPROOT}/test/playwright/tests/example.spec.ts" ]; then
-      cp pw-examples/example-test.spec.ts "${DDEV_APPROOT}/test/playwright/tests/example.spec.ts"
+    if [ -f "${DDEV_APPROOT}/tests/Playwright/tests/example.spec.ts" ]; then
+      cp pw-examples/example-test.spec.ts "${DDEV_APPROOT}/tests/Playwright/tests/example.spec.ts"
       echo "Applied DDEV-optimized example test"
     fi
   - |

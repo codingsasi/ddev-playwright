@@ -62,7 +62,7 @@ test('basic test', async ({ page }) => {
 ### Running in --ui mode (outside ddev container)
 ```bash
 # From project root
-cd test/playwright # Go into playwright folder
+cd tests/Playwright # Go into playwright folder
 nvm use 22
 npm ci
 npx playwright install # Works best on Windows, Mac and Ubuntu (and possibly other Debian based distros). I had trouble with Fedora/Manjaro but not impossible.
