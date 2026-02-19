@@ -26,7 +26,9 @@ elif [ -f ~/.nvm/nvm.sh ]; then
     nvm use 22 2>/dev/null || true
 fi
 
-cd test/playwright || exit 1
+# Use PLAYWRIGHT_TEST_DIR environment variable, default to "tests"
+TEST_DIR="${PLAYWRIGHT_TEST_DIR:-tests}"
+cd ${TEST_DIR}/playwright || exit 1
 
 # Skip browser download since we have them pre-installed
 export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1

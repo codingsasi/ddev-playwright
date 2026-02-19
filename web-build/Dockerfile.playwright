@@ -51,6 +51,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgstreamer-gl1.0-0 \
     libgstreamer-plugins-base1.0-0 \
     gstreamer1.0-libav \
+    libvpx9 \
     libxshmfence1 \
     libglu1 \
     && rm -rf /var/lib/apt/lists/*
@@ -73,10 +74,8 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
     rm -rf /var/lib/apt/lists/* && \
     # Verify Node.js installation
     node --version && npm --version
-
-# Pre-install Playwright and download browsers
-# Using latest version for most up-to-date features
-# Note: playwright install-deps will install any missing system dependencies
+    # Pre-install Playwright and download browsers
+    # Using latest version for most up-to-date features
 RUN npm install -g playwright@latest && \
     npx playwright install-deps && \
     npx playwright install && \

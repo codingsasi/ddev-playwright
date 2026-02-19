@@ -2,7 +2,7 @@ setup() {
   set -eu -o pipefail
   export DIR="$( cd "$( dirname "$BATS_TEST_FILENAME" )" >/dev/null 2>&1 && pwd )/.."
   export TESTDIR=~/tmp/ddev-playwright-test
-  export PW_DIR=${TESTDIR}/test/playwright
+  export PW_DIR=${TESTDIR}/tests/playwright
   mkdir -p $TESTDIR
   export PROJNAME=ddev-playwright-test
   export DDEV_NONINTERACTIVE=true
