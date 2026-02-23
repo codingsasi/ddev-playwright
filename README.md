@@ -6,30 +6,39 @@ This is a DDEV addon that provides a Playwright testing environment for your DDE
 
 ## Installation
 
-```bash
-ddev add-on get codingsasi/ddev-playwright
-ddev restart  # This will build Playwright browsers into the Docker image
-```
+1. **Add the addon** (you will be prompted for Playwright version):
+
+   ```bash
+   ddev add-on get codingsasi/ddev-playwright
+   ```
+
+2. **Restart** to build the web container with Playwright support:
+
+   ```bash
+   ddev restart
+   ```
+
+3. **Init Playwright and install browsers** (uses the version from your config):
+
+   ```bash
+   ddev install-playwright
+   ```
+
+4. **Run tests** — `ddev playwright` is the Playwright CLI:
+
+   ```bash
+   ddev playwright test
+   ```
+
+The addon depends on **ddev-nvm**; the Playwright project folder gets a default `.nvmrc` set to Node 22 (Node 20+ is required).
 
 ## How It Works
 
-This addon builds Playwright browsers directly into the DDEV web container Docker image. This means:
-- **Browsers persist across DDEV restarts** - No need to reinstall after `ddev restart`
-- **Faster startup times** - Browsers are pre-installed in the image
-- **No runtime downloads** - Everything is ready to use immediately
-- **Consistent environment** - All team members get the same browser versions
+This addon builds Playwright browsers into the DDEV web container image and uses a persistent browser path (`/opt/playwright-browsers`). After `ddev install-playwright`, browsers are installed there and persist across restarts.
 
-The first `ddev restart` after installation will take longer (5-10 minutes) as it builds the browsers into the Docker image. Subsequent restarts will be fast.
+- **Reinstall browsers only when needed:** `ddev reinstall-browsers`
 
 ## Configuration
-
-After installation, browsers are already installed. You can verify the installation:
-
-```bash
-# Verify Playwright and browser installation (optional)
-ddev install-playwright
-
-```
 
 ### Customizing the Test Directory
 
@@ -48,17 +57,39 @@ ddev restart
 
 **Note:** If you change this after initial installation, you'll need to manually move your existing Playwright directory to the new location.
 
+### Pinning the Playwright Version
+
+During `ddev add-on get` you will be prompted to enter a version:
+
+```
+Playwright version configuration
+See releases: https://github.com/microsoft/playwright/releases
+
+Enter Playwright version [latest]:
+```
+
+Press Enter to use the latest release, or type a specific version (e.g. `1.49.0`). The choice is written directly into your project's `.ddev/config.yaml` — commit this file so the whole team uses the same version.
+
+To change the version later, run `ddev add-on get` again (you will be prompted only if the version is not yet set) or edit `PLAYWRIGHT_VERSION` in `.ddev/config.yaml` under `web_environment` and run `ddev restart`:
+
 ## Usage
 
-You can run Playwright commands directly using the `ddev playwright` command:
+`ddev playwright` is the Playwright CLI (pass any Playwright CLI args):
 
 ```bash
-# Run Playwright tests
 ddev playwright test
-
-# Show Playwright help
 ddev playwright --help
+ddev playwright codegen
+ddev playwright show-report --host=0.0.0.0   # then open http://<project>.ddev.site:9323
 ```
+
+**Commands:**
+
+| Command | Description |
+|---------|-------------|
+| `ddev install-playwright` | Init Playwright project (if needed), install browsers, set up `.installed` to indicate browsers are installed |
+| `ddev reinstall-browsers` | Reinstall browser binaries even if already installed |
+| `ddev playwright ...` | Run the Playwright CLI (e.g. `test`, `codegen`, `show-report`) |
 
 ## Accessing the Web Application from Tests
 
@@ -148,19 +179,4 @@ This is a very lightweight playwright ddev addon, if you want a more advanced pl
 
 ### Node.js Version Management
 
-As of DDEV v1.25.0, nvm is no longer included by default. DDEV now recommends using the [`nodejs_version`](https://docs.ddev.com/en/stable/users/configuration/config/#nodejs_version) configuration option in your `.ddev/config.yaml` for managing Node.js versions:
-
-```yaml
-# Set a specific Node.js version
-nodejs_version: 22
-
-# Or use auto-detection from .nvmrc, .node-version, or package.json
-nodejs_version: auto
-```
-
-This might cause problems if you need to use an older version of node for your Drupal theme or sass compilations or partially decoupled front-end (react, vue, etc). My recommendation is to install [ddev-nvm addon](https://github.com/ddev/ddev-nvm) and use nvm to manage multiple versions:
-
-```bash
-ddev add-on get ddev/ddev-nvm
-ddev restart
-```
+As of DDEV v1.25.0, nvm is no longer included by default. In most cases this will be required (Drupal themes, progressively decoupled apps, full decoupled apps etc). So for this add-on, I've added ddev-nvm as a dependency and it is required for this add-on.

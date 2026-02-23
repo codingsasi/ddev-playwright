@@ -15,6 +15,31 @@ pre_install_actions:
       echo "This add-on requires DDEV v1.21+ or higher, please upgrade." && exit 2
     fi
 
+  # Show prompt for PLAYWRIGHT_VERSION only if not already set in project config
+  - |
+    #ddev-nodisplay
+    if ( {{ contains "PLAYWRIGHT_VERSION=" (list .DdevProjectConfig.web_environment | toString) }} ); then
+      echo "Using existing PLAYWRIGHT_VERSION from project config."
+    else
+      printf "\nPlaywright version configuration\nSee releases: https://github.com/microsoft/playwright/releases\n\nEnter Playwright version [latest]: "
+    fi
+
+  # Read user input and persist PLAYWRIGHT_VERSION into the project's config.yaml
+  - |
+    #ddev-nodisplay
+    #ddev-description:Configure Playwright version
+    if !( {{ contains "PLAYWRIGHT_VERSION=" (list .DdevProjectConfig.web_environment | toString) }} ); then
+      if [ -n "${DDEV_NONINTERACTIVE:-}" ] || [ ! -t 0 ]; then
+        PW_VERSION="latest"
+        echo "Non-interactive mode, using: ${PW_VERSION}"
+      else
+        read -r PW_VERSION
+        PW_VERSION="${PW_VERSION:-latest}"
+      fi
+      echo "Setting Playwright version to: ${PW_VERSION}"
+      ddev config --web-environment-add "PLAYWRIGHT_VERSION=${PW_VERSION}"
+    fi
+
 # list of files and directories listed that are copied into project .ddev directory
 # Each file should contain #ddev-generated so it can be replaced by a later `ddev add-on get`
 # if it hasn't been modified by the user.
@@ -25,6 +50,7 @@ project_files:
   - config.playwright.yaml
   - commands/web/playwright
   - commands/web/install-playwright
+  - commands/web/reinstall-browsers
   - web-build/Dockerfile.playwright
   - pw-examples
 
@@ -46,115 +72,60 @@ ddev_version_constraint: ''
 
 # List of add-on names that this add-on depends on
 dependencies:
-  # - redis
+  - ddev/ddev-nvm
 
 # DDEV environment variables can be interpolated into these actions.
 # post_install_actions are executed in the context of the target project's .ddev directory.
 post_install_actions:
   - chmod +x commands/web/playwright
   - chmod +x commands/web/install-playwright
+  - chmod +x commands/web/reinstall-browsers
+  - |
+    #ddev-description:Add Playwright version to Docker build args
+    # Read the version saved during pre_install into the project's web_build_args
+    PW_VERSION=$(grep -E "^\s*- PLAYWRIGHT_VERSION=" config.yaml 2>/dev/null | sed 's/.*PLAYWRIGHT_VERSION=//' | head -1)
+    PW_VERSION="${PW_VERSION:-latest}"
+    # Append web_build_args to config.playwright.yaml so Docker uses the right version
+    if ! grep -q "web_build_args" config.playwright.yaml; then
+      printf "\nweb_build_args:\n  PLAYWRIGHT_VERSION: \"%s\"\n" "${PW_VERSION}" >> config.playwright.yaml
+    fi
+    echo "Playwright Docker build arg set to: ${PW_VERSION}"
   - |
     #ddev-description:Setup Playwright test environment
     echo "Setting up Playwright test environment..."
 
     # Use PLAYWRIGHT_TEST_DIR environment variable, default to "tests"
     TEST_DIR="${PLAYWRIGHT_TEST_DIR:-tests}"
-    
-    # Create ${TEST_DIR}/playwright directory if it doesn't exist
+
+    # Create ${TEST_DIR}/playwright directory and default .nvmrc if needed
     if [ ! -d "${DDEV_APPROOT}/${TEST_DIR}/playwright" ]; then
       mkdir -p "${DDEV_APPROOT}/${TEST_DIR}/playwright"
-      echo "Created ${DDEV_APPROOT}/${TEST_DIR}/playwright/ directory"
+      echo "22" > "${DDEV_APPROOT}/${TEST_DIR}/playwright/.nvmrc"
+      echo "Created ${DDEV_APPROOT}/${TEST_DIR}/playwright/ with .nvmrc (Node 22)"
     fi
   - |
-    #ddev-description:Initialize Playwright project with npm init
-    echo "Initializing Playwright project..."
+    #ddev-description:Prepare Playwright configuration for DDEV
+    echo "Preparing Playwright configuration for DDEV..."
 
-    # Use PLAYWRIGHT_TEST_DIR environment variable, default to "tests"
     TEST_DIR="${PLAYWRIGHT_TEST_DIR:-tests}"
-
-    # Use ddev exec to run commands in the web container
-    ddev exec bash -c "
-      # Change to test directory
-      cd /var/www/html/${TEST_DIR}/playwright
-
-      # Try to use Node.js 22 via nvm if available, otherwise use system Node.js
-      if command -v nvm &> /dev/null; then
-        nvm install 22 2>/dev/null || true
-        nvm use 22 2>/dev/null || true
-      elif [ -f ~/.nvm/nvm.sh ]; then
-        source ~/.nvm/nvm.sh
-        nvm install 22 2>/dev/null || true
-        nvm use 22 2>/dev/null || true
-      fi
-
-      # Initialize Playwright project non-interactively
-      # This creates package.json, playwright.config.ts, and example tests
-      echo 'n' | npm init playwright@latest -- --quiet --lang=TypeScript --no-browsers || {
-        echo 'Playwright init failed, trying alternative approach...'
-        npm init -y
-        npm install @playwright/test@latest
-        npx playwright init --yes --lang=TypeScript --no-browsers
-      }
-
-      # Note: Browser installation can be done later with 'ddev playwright install' and 'ddev playwright install-deps'
-
-      echo 'Playwright project initialized successfully!'
-    " || echo "Note: Playwright initialization will occur on first test run"
-  - |
-    #ddev-description:Customize Playwright configuration for DDEV
-    echo "Customizing Playwright configuration for DDEV..."
-
-    # Use PLAYWRIGHT_TEST_DIR environment variable, default to "tests"
-    TEST_DIR="${PLAYWRIGHT_TEST_DIR:-tests}"
-
-    # Ensure tests directory exists (required for global setup/teardown)
     mkdir -p "${DDEV_APPROOT}/${TEST_DIR}/playwright/tests"
-
-    # Copy our custom config to override the generated one
-    if [ -f "${DDEV_APPROOT}/${TEST_DIR}/playwright/playwright.config.ts" ]; then
-      cp pw-examples/playwright.config.ts "${DDEV_APPROOT}/${TEST_DIR}/playwright/playwright.config.ts"
-      echo "Applied DDEV-optimized Playwright configuration"
-    fi
-
-    # Always copy global setup/teardown files (required by playwright.config.ts)
+    [ ! -f "${DDEV_APPROOT}/${TEST_DIR}/playwright/.nvmrc" ] && echo "22" > "${DDEV_APPROOT}/${TEST_DIR}/playwright/.nvmrc"
     cp pw-examples/global-setup.ts "${DDEV_APPROOT}/${TEST_DIR}/playwright/tests/global-setup.ts"
     cp pw-examples/global-teardown.ts "${DDEV_APPROOT}/${TEST_DIR}/playwright/tests/global-teardown.ts"
-    echo "Applied global setup and teardown files"
-
-    # Copy our custom example test if the tests directory was created by npm init
-    if [ -f "${DDEV_APPROOT}/${TEST_DIR}/playwright/tests/example.spec.ts" ]; then
-      cp pw-examples/example-test.spec.ts "${DDEV_APPROOT}/${TEST_DIR}/playwright/tests/example.spec.ts"
-      echo "Applied DDEV-optimized example test"
-    fi
+    echo "Prepared tests/ directory with global setup and teardown; .nvmrc set to 22"
   - |
     #ddev-description:Provide instructions after installation
     echo "Playwright addon has been installed and configured!"
     echo ""
-    echo "Setup completed:"
-    echo "  ✓ Node.js 22 installed and activated"
-    echo "  ✓ Playwright project initialized with npm init playwright@latest"
-    echo "  ✓ DDEV-optimized configuration applied"
-    echo "  ✓ Persistent browser installation configured"
-    echo ""
-    echo "IMPORTANT: The web container will now be rebuilt with Playwright browsers"
-    echo "pre-installed. This is a one-time build that persists across restarts."
-    echo ""
     echo "Next steps:"
-    echo "  1. ddev restart # REQUIRED to build the new web container with Playwright"
-    echo "  2. ddev install-playwright # Verify browser installation (optional)"
-    echo "  3. Run your first test: ddev playwright test tests/example.spec.ts"
+    echo "  1. ddev restart   # Rebuild web container with Playwright support"
+    echo "  2. ddev install-playwright   # Init Playwright (version from config) and install browsers"
+    echo "  3. ddev playwright test      # Run tests (or: ddev playwright --help)"
     echo ""
-    echo "The first restart will take longer as it builds Playwright browsers into"
-    echo "the Docker image. Subsequent restarts will be fast."
+    echo "Optional: ddev reinstall-browsers   # Reinstall browser binaries"
+    echo "          ddev playwright show-report --host=0.0.0.0   # Then visit http://${DDEV_HOSTNAME}:9323"
     echo ""
-    echo "To run Playwright tests:"
-    echo "  ddev playwright test"
-    echo ""
-    echo "To view HTML reports (The host 0.0.0.0 is required to view the report on ddev):"
-    echo "  ddev playwright show-report --host=0.0.0.0"
-    echo "  Then visit: http://${DDEV_HOSTNAME}:9323"
-    echo ""
-    echo "Your Playwright environment with persistent browsers is ready!"
+    echo "Your Playwright environment is ready after steps 1–2."
 
 # Shell actions that can be done during removal of the add-on.
 # Files listed in project_files section will be automatically removed here if they contain #ddev-generated line.

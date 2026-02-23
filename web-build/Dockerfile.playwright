@@ -4,6 +4,7 @@
 
 ARG BASE_IMAGE
 FROM $BASE_IMAGE
+ARG PLAYWRIGHT_VERSION=latest
 
 # Install system dependencies for Playwright browsers
 # These are required for Chrome, Firefox, and WebKit to run properly
@@ -76,7 +77,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
     node --version && npm --version
     # Pre-install Playwright and download browsers
     # Using latest version for most up-to-date features
-RUN npm install -g playwright@latest && \
+RUN npm install -g playwright@${PLAYWRIGHT_VERSION} && \
     npx playwright install-deps && \
     npx playwright install && \
     # Clean up npm cache to reduce image size
