@@ -21,7 +21,18 @@ source ~/.nvm/nvm.sh 2>/dev/null || true
 cd "${PW_DIR}"
 [ -f .nvmrc ] && nvm use 2>/dev/null || nvm use 22 2>/dev/null || true
 
-echo "Reinstalling Playwright browsers..."
+echo "This will remove existing browsers and install them again in ${PLAYWRIGHT_BROWSERS_PATH}."
+read -r -p "Do you want to continue? [y/n]: " CONFIRM_REINSTALL
+case "${CONFIRM_REINSTALL}" in
+  y|Y|yes|YES)
+    echo "Reinstalling Playwright browsers..."
+    ;;
+  *)
+    echo "Aborted. Existing browsers were not modified."
+    exit 0
+    ;;
+esac
+rm -rf /opt/playwright-browsers/*
 npx playwright install chromium firefox webkit
 touch /opt/playwright-browsers/.installed 2>/dev/null || true
 echo "✓ Browsers reinstalled at /opt/playwright-browsers"
