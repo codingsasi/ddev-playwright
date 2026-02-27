@@ -191,7 +191,7 @@ teardown() {
   ddev install-playwright
 
   echo "# Reinstall browsers so they match pinned version (image may have been built with different version)" >&3
-  ddev reinstall-browsers
+  printf 'y\n' | ddev reinstall-browsers
 
   echo "# Verify @playwright/test version in package.json" >&3
   if [ ! -f "${PW_DIR}/package.json" ]; then
