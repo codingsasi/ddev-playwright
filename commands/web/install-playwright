@@ -20,6 +20,27 @@ fi
 
 # ddev-nvm is a dependency; use it
 source ~/.nvm/nvm.sh 2>/dev/null || true
+
+# If the project already has a Playwright config at the root, skip scaffolding into
+# tests/playwright/. Just ensure browsers are installed and exit.
+if [ -f /var/www/html/playwright.config.ts ] || [ -f /var/www/html/playwright.config.js ]; then
+    echo "✓ Existing Playwright config detected at project root."
+    echo "  Skipping scaffold setup — your project manages its own Playwright configuration."
+    if [ -f /opt/playwright-browsers/.installed ]; then
+        echo "✓ Browsers already installed at /opt/playwright-browsers"
+    else
+        echo "Installing browsers for the project's @playwright/test version..."
+        nvm use 2>/dev/null || nvm install 22
+        cd /var/www/html || exit 1
+        npx playwright install chromium firefox webkit
+        touch /opt/playwright-browsers/.installed
+        echo "✓ Browsers installed."
+    fi
+    echo ""
+    echo "✓ Playwright is ready. Run tests with: ddev playwright test"
+    exit 0
+fi
+
 mkdir -p "${PW_DIR}"
 cd "${PW_DIR}"
 
