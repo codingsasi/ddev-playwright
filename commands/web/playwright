@@ -26,17 +26,24 @@ elif [ -f ~/.nvm/nvm.sh ]; then
     nvm use 22 2>/dev/null || true
 fi
 
-# Use PLAYWRIGHT_TEST_DIR environment variable, default to "tests"
-TEST_DIR="${PLAYWRIGHT_TEST_DIR:-tests}"
-cd ${TEST_DIR}/playwright || exit 1
-
 # Skip browser download since we have them pre-installed
 export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 
-if [ -f yarn.lock ]; then
-  yarn && yarn playwright "$@"
-elif [ -f package-lock.json ]; then
-  npm ci && npx playwright "$@"
+# Auto-detect: if a playwright.config.ts/js exists at the project root, use it directly.
+# This supports projects that manage their own Playwright setup (e.g. with an e2e/ directory)
+# without needing the tests/playwright/ scaffold this addon creates by default.
+if [ -f /var/www/html/playwright.config.ts ] || [ -f /var/www/html/playwright.config.js ]; then
+    cd /var/www/html || exit 1
+    npx playwright "$@"
 else
-  npm install && npx playwright "$@"
+    # Fall back to addon-managed scaffold directory
+    TEST_DIR="${PLAYWRIGHT_TEST_DIR:-tests}"
+    cd "/var/www/html/${TEST_DIR}/playwright" || exit 1
+    if [ -f yarn.lock ]; then
+        yarn && yarn playwright "$@"
+    elif [ -f package-lock.json ]; then
+        npm ci && npx playwright "$@"
+    else
+        npm install && npx playwright "$@"
+    fi
 fi
