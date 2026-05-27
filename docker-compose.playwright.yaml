@@ -1,0 +1,17 @@
+#ddev-generated
+# Mount a globally-named Docker volume at /opt/playwright-browsers so that
+# every DDEV project using this addon shares one copy of the Playwright
+# browser cache (~1.2 GB) instead of downloading per project.
+#
+# The volume is declared external so `ddev delete -O` on one project does not
+# wipe browsers that other projects still depend on. It is created during
+# add-on install (`docker volume create ddev-playwright-browsers`).
+services:
+  web:
+    volumes:
+      - playwright-browsers:/opt/playwright-browsers
+
+volumes:
+  playwright-browsers:
+    name: ddev-playwright-browsers
+    external: true

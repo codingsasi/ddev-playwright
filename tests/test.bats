@@ -171,6 +171,80 @@ teardown() {
   fi
 }
 
+@test "shared browsers volume reused by second project" {
+  set -eu -o pipefail
+
+  # Project A: the standard setup() project. Pin a version, install addon,
+  # run install-playwright — this populates the shared docker volume.
+  cd "${TESTDIR}"
+  PIN_VERSION="1.49.0"
+  echo "# Project A (${PROJNAME}): pin Playwright ${PIN_VERSION}" >&3
+  ddev config --web-environment-add "PLAYWRIGHT_VERSION=${PIN_VERSION}"
+
+  echo "# Project A: install addon and populate shared volume" >&3
+  ddev add-on get ${DIR}
+  ddev restart >/dev/null
+  ddev install-playwright
+
+  echo "# Verify shared docker volume exists and per-version marker is present" >&3
+  docker volume inspect ddev-playwright-browsers >/dev/null
+  ddev exec "test -f /opt/playwright-browsers/${PIN_VERSION}/.installed"
+  echo "# Shared volume populated by Project A OK" >&3
+
+  # Project B: a second, independent ddev project. Should reuse the volume
+  # populated by A — install-playwright must skip the browser download.
+  # No EXIT trap here: it would clobber bats's own EXIT trap and cause the
+  # test result line to be lost. Any leftover state is cleaned up at the
+  # start of this test on the next run.
+  PROJ_B="${PROJNAME}-second"
+  DIR_B="${TESTDIR}-second"
+  ddev delete -Oy "${PROJ_B}" >/dev/null 2>&1 || true
+  rm -rf "${DIR_B}"
+
+  mkdir -p "${DIR_B}/web"
+  cd "${DIR_B}"
+  cat > web/index.php << 'EOF'
+<!DOCTYPE html>
+<html><head><title>DDEV Playwright Test (Project B)</title></head>
+<body><h1>Project B</h1><p>Shared volume reuse test</p></body></html>
+EOF
+  ddev config --project-type=php --project-name=${PROJ_B} --docroot=web --create-docroot >/dev/null
+  ddev config --web-environment-add "PLAYWRIGHT_VERSION=${PIN_VERSION}"
+  ddev start -y >/dev/null
+
+  echo "# Project B: install addon (should reuse shared volume, no re-download)" >&3
+  ddev add-on get ${DIR}
+  ddev restart >/dev/null
+
+  INSTALL_OUT=$(ddev install-playwright 2>&1)
+  if echo "${INSTALL_OUT}" | grep -q "already present in shared volume"; then
+    echo "# Project B skipped browser download via shared volume OK" >&3
+  else
+    echo "# Project B did not reuse the shared volume. install-playwright output:"
+    echo "${INSTALL_OUT}"
+    ddev delete -Oy "${PROJ_B}" >/dev/null 2>&1 || true
+    rm -rf "${DIR_B}"
+    exit 1
+  fi
+
+  echo "# Project B can run Playwright tests against shared browsers" >&3
+  if ddev playwright test --project=chromium 2>/dev/null; then
+    echo "# Project B tests passed using shared volume OK" >&3
+  else
+    echo "# Project B tests failed"
+    ddev playwright test --project=chromium
+    ddev delete -Oy "${PROJ_B}" >/dev/null 2>&1 || true
+    rm -rf "${DIR_B}"
+    exit 1
+  fi
+
+  # Happy-path cleanup. Move out of DIR_B before deleting it so bats's
+  # teardown (which cd's into TESTDIR) doesn't see a missing cwd.
+  cd "${TESTDIR}"
+  ddev delete -Oy "${PROJ_B}" >/dev/null 2>&1 || true
+  rm -rf "${DIR_B}"
+}
+
 @test "install specific Playwright version and verify installed version" {
   set -eu -o pipefail
   cd "${TESTDIR}"

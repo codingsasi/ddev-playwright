@@ -8,15 +8,18 @@
 
 set -e
 
-# Ensure we're using the persistent browser installation
-export PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers
-
-# Check if browsers are installed
-if [ ! -f /opt/playwright-browsers/.installed ]; then
-    echo "⚠️  Playwright browsers not found!"
+# Resolve the actual @playwright/test version from the local install and
+# point PLAYWRIGHT_BROWSERS_PATH at the matching per-version subdirectory of
+# the shared volume.
+TEST_DIR_CHECK="${PLAYWRIGHT_TEST_DIR:-tests}"
+PW_DIR_CHECK="/var/www/html/${TEST_DIR_CHECK}/playwright"
+ACTUAL_VERSION=$(node -p "require('${PW_DIR_CHECK}/node_modules/@playwright/test/package.json').version" 2>/dev/null || echo "")
+if [ -z "${ACTUAL_VERSION}" ] || [ ! -f "/opt/playwright-browsers/${ACTUAL_VERSION}/.installed" ]; then
+    echo "⚠️  Playwright browsers not found in shared volume!"
     echo "Please run: ddev install-playwright"
     exit 1
 fi
+export PLAYWRIGHT_BROWSERS_PATH="/opt/playwright-browsers/${ACTUAL_VERSION}"
 
 # Use Node.js 22 if available via nvm, otherwise use system Node.js
 if command -v nvm &> /dev/null; then

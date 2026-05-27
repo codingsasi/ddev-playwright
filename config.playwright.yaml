@@ -22,12 +22,36 @@ web_environment:
 # Create a volume to persist npm cache (optional, helps with npm install speed)
 additional_hostnames: []
 
-# Hook to ensure browsers are available
+# Hook to ensure browsers for THIS project's Playwright version are present
+# in the shared volume. The marker is version-scoped so projects on different
+# Playwright versions can coexist in the same volume.
+#
+# Only auto-installs when the user has already run `ddev install-playwright`
+# (i.e. @playwright/test is in node_modules). Before that, npx has no local
+# Playwright to run from and would prompt to download `playwright` globally,
+# stalling `ddev start`.
 hooks:
   post-start:
     - exec: |
-        if [ ! -f /opt/playwright-browsers/.installed ]; then
-          echo "Playwright browsers not found. Installing..."
-          npx playwright install chromium firefox webkit
-          touch /opt/playwright-browsers/.installed
+        # Self-heal volume perms in case the volume was created empty as root.
+        if [ ! -w /opt/playwright-browsers ]; then
+          sudo chmod 777 /opt/playwright-browsers
+        fi
+        TEST_DIR="${PLAYWRIGHT_TEST_DIR:-tests}"
+        PW_DIR="/var/www/html/${TEST_DIR}/playwright"
+        if [ ! -f "${PW_DIR}/node_modules/@playwright/test/package.json" ]; then
+          echo "Playwright project not initialized yet. Run 'ddev install-playwright' to set it up and populate the shared browser cache."
+          exit 0
+        fi
+        # Per-version subdirectory: Playwright's install cleans up stray
+        # browser dirs, which would clobber other versions if we shared the
+        # root. Subdirs keyed by resolved @playwright/test version isolate them.
+        ACTUAL_VERSION=$(node -p "require('${PW_DIR}/node_modules/@playwright/test/package.json').version")
+        PW_BROWSERS="/opt/playwright-browsers/${ACTUAL_VERSION}"
+        MARKER="${PW_BROWSERS}/.installed"
+        if [ ! -f "${MARKER}" ]; then
+          echo "Playwright browsers for version ${ACTUAL_VERSION} not found in shared volume. Installing..."
+          mkdir -p "${PW_BROWSERS}"
+          cd "${PW_DIR}" && PLAYWRIGHT_BROWSERS_PATH="${PW_BROWSERS}" npx playwright install chromium firefox webkit
+          touch "${MARKER}"
         fi

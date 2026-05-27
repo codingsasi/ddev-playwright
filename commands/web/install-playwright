@@ -70,13 +70,20 @@ else
   npm install -D @playwright/test@${VERSION}
 fi
 
-# Install browsers to persistent location (skip if already marked)
-if [ -f /opt/playwright-browsers/.installed ]; then
-  echo "✓ Browsers already installed at /opt/playwright-browsers (use 'ddev reinstall-browsers' to reinstall)"
+# Install browsers into a per-version subdirectory of the shared volume.
+# Per-version isolation is required because `npx playwright install` cleans
+# up browser dirs it doesn't recognize — projects on different versions
+# would otherwise wipe each other's binaries.
+ACTUAL_VERSION=$(node -p "require('${PW_DIR}/node_modules/@playwright/test/package.json').version" 2>/dev/null || echo "${VERSION}")
+export PLAYWRIGHT_BROWSERS_PATH="/opt/playwright-browsers/${ACTUAL_VERSION}"
+mkdir -p "${PLAYWRIGHT_BROWSERS_PATH}"
+MARKER="${PLAYWRIGHT_BROWSERS_PATH}/.installed"
+if [ -f "${MARKER}" ]; then
+  echo "✓ Browsers for Playwright ${ACTUAL_VERSION} already present in shared volume (use 'ddev reinstall-browsers' to refresh)"
 else
-  echo "Installing browsers to /opt/playwright-browsers..."
+  echo "Installing browsers for Playwright ${ACTUAL_VERSION} into shared volume (${PLAYWRIGHT_BROWSERS_PATH})..."
   npx playwright install chromium firefox webkit
-  touch /opt/playwright-browsers/.installed
+  touch "${MARKER}"
   echo "✓ Browsers installed."
 fi
 

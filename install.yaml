@@ -15,6 +15,13 @@ pre_install_actions:
       echo "This add-on requires DDEV v1.21+ or higher, please upgrade." && exit 2
     fi
 
+  - |
+    #ddev-description:Create shared Playwright browsers volume
+    # Volume is shared across every DDEV project using this addon so the
+    # ~1.2 GB browser cache only lives on disk once. `docker volume create`
+    # is idempotent — no-op if the volume already exists.
+    docker volume create ddev-playwright-browsers >/dev/null
+
   # Show prompt for PLAYWRIGHT_VERSION only if not already set in project config
   - |
     #ddev-nodisplay
@@ -48,6 +55,7 @@ pre_install_actions:
 # by this add-on, or removal could remove things that are not owned by it
 project_files:
   - config.playwright.yaml
+  - docker-compose.playwright.yaml
   - commands/web/playwright
   - commands/web/install-playwright
   - commands/web/reinstall-browsers
@@ -134,8 +142,11 @@ removal_actions:
   - |
     #ddev-description:Clean up Playwright installation
     echo "Playwright addon has been removed."
-    echo "Note: Playwright binaries remain installed in the web container."
-    echo "To completely remove Playwright, you may need to rebuild your web container."
+    echo ""
+    echo "Note: the shared Playwright browsers volume (ddev-playwright-browsers)"
+    echo "was NOT removed — other DDEV projects may still be using it."
+    echo "To reclaim the ~1.2 GB once no project needs it, run:"
+    echo "  docker volume rm ddev-playwright-browsers"
     rm -rf .ddev/pw-examples
 
 # Advanced usage - YAML files can be read in and then used as go template actions

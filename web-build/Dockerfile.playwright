@@ -1,6 +1,8 @@
 #ddev-generated
-# This Dockerfile installs Playwright and its browsers into the web container
-# The browsers will persist across container restarts because they're built into the image
+# This Dockerfile installs Playwright system dependencies and the Playwright
+# CLI into the web container. Browsers themselves live in a shared Docker
+# volume (ddev-playwright-browsers) mounted at /opt/playwright-browsers, so
+# they are NOT downloaded during image build — see docker-compose.playwright.yaml.
 
 ARG BASE_IMAGE
 FROM $BASE_IMAGE
@@ -56,36 +58,27 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libglu1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Set environment variable for Playwright browsers location
-# This ensures browsers are installed to a consistent location
 ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers
 
-# Create the browsers directory with proper permissions
-RUN mkdir -p /opt/playwright-browsers && \
-    chmod -R 777 /opt/playwright-browsers
+# Pre-create the browsers directory world-writable. When the shared volume
+# (ddev-playwright-browsers) is mounted onto an empty fresh volume, Docker
+# initializes the volume from this directory, so the volume inherits 0777
+# perms — the non-root web user can then write to it.
+RUN mkdir -p /opt/playwright-browsers && chmod 777 /opt/playwright-browsers
 
-# Use nvm to install Node.js 22 and install Playwright
-# DDEV web containers already have nvm installed
 SHELL ["/bin/bash", "-c"]
 # Install Node.js 22 directly using NodeSource repository
 # This is more reliable than relying on nvm availability in the base image
 RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
     apt-get install -y nodejs && \
     rm -rf /var/lib/apt/lists/* && \
-    # Verify Node.js installation
     node --version && npm --version
-    # Pre-install Playwright and download browsers
-    # Using latest version for most up-to-date features
+
+# Install the Playwright CLI globally and run install-deps (writes to /usr,
+# not the volume). Browsers themselves are downloaded at runtime by
+# `ddev install-playwright` into the shared volume.
 RUN npm install -g playwright@${PLAYWRIGHT_VERSION} && \
     npx playwright install-deps && \
-    npx playwright install && \
-    # Clean up npm cache to reduce image size
-    npm cache clean --force && \
-    # Set proper permissions for all users
-    chmod -R 777 /opt/playwright-browsers
+    npm cache clean --force
 
-# Add a marker file to indicate Playwright is installed
-RUN touch /opt/playwright-browsers/.installed
-
-# Expose Playwright's default test report port
 EXPOSE 9323

@@ -34,9 +34,21 @@ The addon depends on **ddev-nvm**; the Playwright project folder gets a default 
 
 ## How It Works
 
-This addon builds Playwright browsers into the DDEV web container image and uses a persistent browser path (`/opt/playwright-browsers`). After `ddev install-playwright`, browsers are installed there and persist across restarts.
+This addon installs Playwright system dependencies and the Playwright CLI into the DDEV web container, then mounts a Docker volume at `/opt/playwright-browsers` for the actual browser binaries. The first `ddev install-playwright` populates this volume; subsequent restarts (and other projects) reuse it.
 
 - **Reinstall browsers only when needed:** `ddev reinstall-browsers`
+
+### Shared browser cache across projects
+
+The browser cache lives in a globally-named Docker volume — `ddev-playwright-browsers` — that is shared across **every** DDEV project using this addon. The full browser set is ~1.2 GB, so sharing means it lives on disk once instead of per project, and new projects skip the download entirely after the first install.
+
+Each Playwright version gets its own subdirectory inside the volume (e.g. `/opt/playwright-browsers/1.49.0/`, `/opt/playwright-browsers/1.59.1/`), so projects pinned to different Playwright versions coexist safely. This isolation is required because `npx playwright install` cleans up browser folders it doesn't recognize, which would otherwise wipe other versions' binaries.
+
+The volume is declared `external: true`, so removing the addon from one project (or `ddev delete -O`) does **not** wipe browsers other projects still depend on. To reclaim the disk space once no project needs it, run:
+
+```bash
+docker volume rm ddev-playwright-browsers
+```
 
 ## Configuration
 
