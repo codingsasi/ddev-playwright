@@ -6,7 +6,7 @@ This is a DDEV addon that provides a Playwright testing environment for your DDE
 
 ## Installation
 
-1. **Add the addon** (you will be prompted for Playwright version):
+1. **Add the addon** (you will be prompted for the Playwright version, then the Node version):
 
    ```bash
    ddev add-on get codingsasi/ddev-playwright
@@ -30,11 +30,13 @@ This is a DDEV addon that provides a Playwright testing environment for your DDE
    ddev playwright test
    ```
 
-The addon depends on **ddev-nvm**; the Playwright project folder gets a default `.nvmrc` set to Node 22 (Node 20+ is required).
+The addon depends on **ddev-nvm**; the Playwright project folder gets a `.nvmrc` seeded from the Node version you chose at install (default `lts/*`). That `.nvmrc` is the source of truth for the Node version — Playwright requires Node >= 18. See [Configuring the Node Version](#configuring-the-node-version).
 
 ## How It Works
 
 This addon installs Playwright system dependencies and the Playwright CLI into the DDEV web container, then mounts a Docker volume at `/opt/playwright-browsers` for the actual browser binaries. The first `ddev install-playwright` populates this volume; subsequent restarts (and other projects) reuse it.
+
+The web image also installs the Noto font set (`fonts-noto-core`, `fonts-noto-cjk`, `fonts-noto-color-emoji`) so browsers render Unicode — CJK text and color emoji — instead of blank/tofu boxes.
 
 - **Reinstall browsers only when needed:** `ddev reinstall-browsers`
 
@@ -84,6 +86,22 @@ Press Enter to use the latest release, or type a specific version (e.g. `1.49.0`
 
 To change the version later, run `ddev add-on get` again (you will be prompted only if the version is not yet set) or edit `PLAYWRIGHT_VERSION` in `.ddev/config.yaml` under `web_environment` and run `ddev restart`:
 
+### Configuring the Node Version
+
+During `ddev add-on get` you will also be prompted for a Node version:
+
+```
+Node version configuration (Playwright requires Node >= 18)
+Accepts any nvm alias: an LTS alias (lts/*), a major (22), or exact (20.11).
+This seeds the Playwright dir's .nvmrc, which stays the source of truth.
+
+Enter Node version [lts/*]:
+```
+
+Press Enter for `lts/*` (latest LTS), or type any nvm-compatible version. The choice is stored as `PLAYWRIGHT_NODE_VERSION` in `.ddev/config.yaml` and used to seed the Playwright directory's `.nvmrc`.
+
+**`.nvmrc` is the source of truth for the Node version.** To switch versions later, edit the `.nvmrc` in your Playwright directory (e.g. `tests/playwright/.nvmrc`) to `20`, `lts/iron`, etc., then run `ddev restart`. All addon commands (`install-playwright`, `reinstall-browsers`, `playwright`, and the post-start hook) read this file via `nvm use`, installing the version on demand if it isn't present yet. Commit `.nvmrc` so the whole team uses the same Node version.
+
 ## Usage
 
 `ddev playwright` is the Playwright CLI (pass any Playwright CLI args):
@@ -123,7 +141,7 @@ test('basic test', async ({ page }) => {
 ```bash
 # From project root
 cd tests/playwright # Go into playwright folder (or "test/playwright" if you customized PLAYWRIGHT_TEST_DIR)
-nvm use 22
+nvm use   # reads .nvmrc (install it first with `nvm install` if needed)
 npm ci
 npx playwright install # Works best on Windows, Mac and Ubuntu (and possibly other Debian based distros). I had trouble with Fedora/Manjaro but not impossible.
 npx playwright test --ui
