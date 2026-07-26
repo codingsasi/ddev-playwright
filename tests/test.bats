@@ -245,6 +245,98 @@ EOF
   rm -rf "${DIR_B}"
 }
 
+@test "unicode fonts are installed and render in the browser" {
+  set -eu -o pipefail
+  cd "${TESTDIR}"
+
+  echo "# Basic site check" >&3
+  health_checks
+
+  echo "# Install addon and init Playwright" >&3
+  ddev add-on get ${DIR}
+  ddev restart
+  ddev install-playwright
+
+  # Issue #8: the web image must ship Noto fonts so browsers render CJK text
+  # and color emoji instead of blank/tofu boxes. First verify the packages
+  # landed at the OS level (deterministic — this is the authoritative check).
+  echo "# Verify Noto font families are present via fc-list" >&3
+  FONTS=$(ddev exec fc-list : family 2>/dev/null | tr ',' '\n')
+  for family in "Noto Sans CJK" "Noto Color Emoji" "Noto Serif"; do
+    if echo "${FONTS}" | grep -qi "${family}"; then
+      echo "# Font present: ${family} OK" >&3
+    else
+      echo "# Missing expected font family: ${family}"
+      echo "${FONTS}" | grep -i noto | sort -u
+      exit 1
+    fi
+  done
+
+  # fontconfig should resolve an emoji request to the color-emoji font.
+  echo "# Verify fc-match resolves emoji to Noto Color Emoji" >&3
+  ddev exec fc-match emoji 2>/dev/null | grep -qi "Noto Color Emoji"
+
+  # End-to-end: prove Chromium actually rasterises the glyphs. A color-emoji
+  # glyph produces many distinct colors; a missing font renders a monochrome
+  # tofu box (one or two colors), so the colour count cleanly distinguishes the
+  # two. CJK coverage is asserted above via fc-list.
+  echo "# Write a rendering spec and run it on chromium" >&3
+  cat > "${PW_DIR}/tests/unicode-fonts.spec.ts" << 'SPECEOF'
+import { test, expect } from '@playwright/test';
+
+// Rasterise one character to an offscreen canvas and report how many pixels
+// were inked and how many distinct colours appear among them.
+function rasterise(ch: string) {
+  const size = 64;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+  ctx.clearRect(0, 0, size, size);
+  ctx.textBaseline = 'top';
+  ctx.font = '48px sans-serif';
+  ctx.fillStyle = 'black';
+  ctx.fillText(ch, 0, 0);
+  const { data } = ctx.getImageData(0, 0, size, size);
+  let ink = 0;
+  const colors = new Set<string>();
+  for (let i = 0; i < data.length; i += 4) {
+    if (data[i + 3] > 10) {
+      ink++;
+      colors.add(`${data[i]},${data[i + 1]},${data[i + 2]}`);
+    }
+  }
+  return { ink, colors: colors.size };
+}
+
+// Issue #8: browsers in the DDEV web container must render Unicode correctly.
+test('renders CJK text and color emoji', async ({ page }) => {
+  await page.setContent(
+    '<!doctype html><meta charset="utf-8">' +
+    '<div style="font-size:48px">中文 日本語 한국어 😀🎉🚀</div>'
+  );
+
+  const cjk = await page.evaluate(rasterise, '中');
+  const emoji = await page.evaluate(rasterise, '😀');
+
+  // The CJK glyph must render something visible (not blank/zero-width).
+  expect(cjk.ink).toBeGreaterThan(50);
+
+  // The color-emoji glyph must render in color. A tofu box is monochrome, so
+  // requiring several distinct colors reliably proves fonts-noto-color-emoji.
+  expect(emoji.colors).toBeGreaterThan(4);
+});
+SPECEOF
+
+  if ddev playwright test unicode-fonts --project=chromium 2>/dev/null; then
+    echo "# Unicode fonts render correctly in chromium OK" >&3
+  else
+    echo "# Unicode rendering test failed"
+    ddev playwright test unicode-fonts --project=chromium
+    exit 1
+  fi
+}
+
 @test "install specific Playwright version and verify installed version" {
   set -eu -o pipefail
   cd "${TESTDIR}"

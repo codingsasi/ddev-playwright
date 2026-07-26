@@ -47,6 +47,31 @@ pre_install_actions:
       ddev config --web-environment-add "PLAYWRIGHT_VERSION=${PW_VERSION}"
     fi
 
+  # Show prompt for PLAYWRIGHT_NODE_VERSION only if not already set in project config
+  - |
+    #ddev-nodisplay
+    if ( {{ contains "PLAYWRIGHT_NODE_VERSION=" (list .DdevProjectConfig.web_environment | toString) }} ); then
+      echo "Using existing PLAYWRIGHT_NODE_VERSION from project config."
+    else
+      printf "\nNode version configuration (Playwright requires Node >= 18)\nAccepts any nvm alias: an LTS alias (lts/*), a major (22), or exact (20.11).\nThis seeds the Playwright dir's .nvmrc, which stays the source of truth.\n\nEnter Node version [lts/*]: "
+    fi
+
+  # Read user input and persist PLAYWRIGHT_NODE_VERSION into the project's config.yaml
+  - |
+    #ddev-nodisplay
+    #ddev-description:Configure Node version
+    if !( {{ contains "PLAYWRIGHT_NODE_VERSION=" (list .DdevProjectConfig.web_environment | toString) }} ); then
+      if [ -n "${DDEV_NONINTERACTIVE:-}" ] || [ ! -t 0 ]; then
+        PW_NODE_VERSION="lts/*"
+        echo "Non-interactive mode, using: ${PW_NODE_VERSION}"
+      else
+        read -r PW_NODE_VERSION
+        PW_NODE_VERSION="${PW_NODE_VERSION:-lts/*}"
+      fi
+      echo "Setting Node version to: ${PW_NODE_VERSION}"
+      ddev config --web-environment-add "PLAYWRIGHT_NODE_VERSION=${PW_NODE_VERSION}"
+    fi
+
 # list of files and directories listed that are copied into project .ddev directory
 # Each file should contain #ddev-generated so it can be replaced by a later `ddev add-on get`
 # if it hasn't been modified by the user.
@@ -89,15 +114,18 @@ post_install_actions:
   - chmod +x commands/web/install-playwright
   - chmod +x commands/web/reinstall-browsers
   - |
-    #ddev-description:Add Playwright version to Docker build args
-    # Read the version saved during pre_install into the project's web_build_args
+    #ddev-description:Add Playwright and Node versions to Docker build args
+    # Read the versions saved during pre_install into the project's web_build_args
     PW_VERSION=$(grep -E "^\s*- PLAYWRIGHT_VERSION=" config.yaml 2>/dev/null | sed 's/.*PLAYWRIGHT_VERSION=//' | head -1)
     PW_VERSION="${PW_VERSION:-latest}"
-    # Append web_build_args to config.playwright.yaml so Docker uses the right version
+    PW_NODE_VERSION=$(grep -E "^\s*- PLAYWRIGHT_NODE_VERSION=" config.yaml 2>/dev/null | sed 's/.*PLAYWRIGHT_NODE_VERSION=//' | head -1)
+    PW_NODE_VERSION="${PW_NODE_VERSION:-lts/*}"
+    # Append web_build_args to config.playwright.yaml so Docker pre-bakes the
+    # right Node version (NODE_VERSION) and installs the right Playwright CLI.
     if ! grep -q "web_build_args" config.playwright.yaml; then
-      printf "\nweb_build_args:\n  PLAYWRIGHT_VERSION: \"%s\"\n" "${PW_VERSION}" >> config.playwright.yaml
+      printf "\nweb_build_args:\n  PLAYWRIGHT_VERSION: \"%s\"\n  NODE_VERSION: \"%s\"\n" "${PW_VERSION}" "${PW_NODE_VERSION}" >> config.playwright.yaml
     fi
-    echo "Playwright Docker build arg set to: ${PW_VERSION}"
+    echo "Docker build args set to: Playwright ${PW_VERSION}, Node ${PW_NODE_VERSION}"
   - |
     #ddev-description:Setup Playwright test environment
     echo "Setting up Playwright test environment..."
@@ -105,22 +133,27 @@ post_install_actions:
     # Use PLAYWRIGHT_TEST_DIR environment variable, default to "tests"
     TEST_DIR="${PLAYWRIGHT_TEST_DIR:-tests}"
 
-    # Create ${TEST_DIR}/playwright directory and default .nvmrc if needed
+    # Create ${TEST_DIR}/playwright directory and default .nvmrc if needed.
+    # Seed .nvmrc from the configured Node version; it is the source of truth.
+    PW_NODE_VERSION=$(grep -E "^\s*- PLAYWRIGHT_NODE_VERSION=" config.yaml 2>/dev/null | sed 's/.*PLAYWRIGHT_NODE_VERSION=//' | head -1)
+    PW_NODE_VERSION="${PW_NODE_VERSION:-lts/*}"
     if [ ! -d "${DDEV_APPROOT}/${TEST_DIR}/playwright" ]; then
       mkdir -p "${DDEV_APPROOT}/${TEST_DIR}/playwright"
-      echo "22" > "${DDEV_APPROOT}/${TEST_DIR}/playwright/.nvmrc"
-      echo "Created ${DDEV_APPROOT}/${TEST_DIR}/playwright/ with .nvmrc (Node 22)"
+      echo "${PW_NODE_VERSION}" > "${DDEV_APPROOT}/${TEST_DIR}/playwright/.nvmrc"
+      echo "Created ${DDEV_APPROOT}/${TEST_DIR}/playwright/ with .nvmrc (Node ${PW_NODE_VERSION})"
     fi
   - |
     #ddev-description:Prepare Playwright configuration for DDEV
     echo "Preparing Playwright configuration for DDEV..."
 
     TEST_DIR="${PLAYWRIGHT_TEST_DIR:-tests}"
+    PW_NODE_VERSION=$(grep -E "^\s*- PLAYWRIGHT_NODE_VERSION=" config.yaml 2>/dev/null | sed 's/.*PLAYWRIGHT_NODE_VERSION=//' | head -1)
+    PW_NODE_VERSION="${PW_NODE_VERSION:-lts/*}"
     mkdir -p "${DDEV_APPROOT}/${TEST_DIR}/playwright/tests"
-    [ ! -f "${DDEV_APPROOT}/${TEST_DIR}/playwright/.nvmrc" ] && echo "22" > "${DDEV_APPROOT}/${TEST_DIR}/playwright/.nvmrc"
+    [ ! -f "${DDEV_APPROOT}/${TEST_DIR}/playwright/.nvmrc" ] && echo "${PW_NODE_VERSION}" > "${DDEV_APPROOT}/${TEST_DIR}/playwright/.nvmrc"
     cp pw-examples/global-setup.ts "${DDEV_APPROOT}/${TEST_DIR}/playwright/tests/global-setup.ts"
     cp pw-examples/global-teardown.ts "${DDEV_APPROOT}/${TEST_DIR}/playwright/tests/global-teardown.ts"
-    echo "Prepared tests/ directory with global setup and teardown; .nvmrc set to 22"
+    echo "Prepared tests/ directory with global setup and teardown; .nvmrc set to ${PW_NODE_VERSION}"
   - |
     #ddev-description:Provide instructions after installation
     echo "Playwright addon has been installed and configured!"

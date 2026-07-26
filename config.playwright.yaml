@@ -18,6 +18,11 @@ web_environment:
   - PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers
   - PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1  # Skip download since browsers are pre-installed
   - PLAYWRIGHT_TEST_DIR=${PLAYWRIGHT_TEST_DIR:-tests}  # Default test directory (can be overridden in config.yaml)
+  # Default Node version used to seed .nvmrc when a project doesn't already
+  # have one. The Playwright test dir's .nvmrc is the real source of truth for
+  # the runtime Node version — edit it (e.g. to "20" or "lts/iron") to switch.
+  # Playwright requires Node >= 18. Set at install time; override in config.yaml.
+  - PLAYWRIGHT_NODE_VERSION=${PLAYWRIGHT_NODE_VERSION:-lts/*}
 
 # Create a volume to persist npm cache (optional, helps with npm install speed)
 additional_hostnames: []
@@ -43,6 +48,17 @@ hooks:
           echo "Playwright project not initialized yet. Run 'ddev install-playwright' to set it up and populate the shared browser cache."
           exit 0
         fi
+        # Select the Node version from the project's .nvmrc (single source of
+        # truth). nvm's default alias may point at an old version (e.g. 12.x);
+        # Playwright's CLI uses modern JS (optional chaining) and dies with
+        # "Unexpected token '.'" on Node < 18, so we must switch deliberately.
+        # `nvm use`/`nvm install` both read .nvmrc in the current directory, so
+        # cd into PW_DIR first; `nvm install` self-installs a not-yet-present
+        # version (one-time cost) before any node/npx call.
+        export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+        source "${NVM_DIR}/nvm.sh" 2>/dev/null || true
+        cd "${PW_DIR}" || exit 1
+        nvm use >/dev/null 2>&1 || nvm install >/dev/null 2>&1 || nvm use "${PLAYWRIGHT_NODE_VERSION:-lts/*}" >/dev/null 2>&1 || true
         # Per-version subdirectory: Playwright's install cleans up stray
         # browser dirs, which would clobber other versions if we shared the
         # root. Subdirs keyed by resolved @playwright/test version isolate them.

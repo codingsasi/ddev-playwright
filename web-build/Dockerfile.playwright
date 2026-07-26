@@ -56,6 +56,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gstreamer1.0-libav \
     libxshmfence1 \
     libglu1 \
+    # Fonts so browsers render Unicode correctly in tests — without these,
+    # CJK text and emoji show as tofu/blank boxes (see issue #8):
+    #   noto-core  = broad Latin/Greek/Cyrillic and many scripts
+    #   noto-cjk   = Chinese, Japanese, Korean
+    #   noto-color-emoji = color emoji glyphs
+    fonts-noto-core \
+    fonts-noto-cjk \
+    fonts-noto-color-emoji \
     && rm -rf /var/lib/apt/lists/*
 
 ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers
@@ -67,9 +75,15 @@ ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers
 RUN mkdir -p /opt/playwright-browsers && chmod 777 /opt/playwright-browsers
 
 SHELL ["/bin/bash", "-c"]
-# Install Node.js 22 directly using NodeSource repository
-# This is more reliable than relying on nvm availability in the base image
-RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
+# Build-time bootstrap Node, installed via NodeSource's current-LTS channel.
+# This node is used ONLY to run `playwright install-deps` below, which installs
+# OS-level (apt) browser dependencies and is entirely Node-version agnostic.
+#
+# The RUNTIME Node version is NOT decided here — it comes from the project's
+# tests/playwright/.nvmrc (seeded from PLAYWRIGHT_NODE_VERSION) via nvm, so this
+# add-on is not pinned to any single Node major. We use the LTS channel rather
+# than a hardcoded major so the bootstrap itself tracks a supported release.
+RUN curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - && \
     apt-get install -y nodejs && \
     rm -rf /var/lib/apt/lists/* && \
     node --version && npm --version
@@ -80,5 +94,17 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
 RUN npm install -g playwright@${PLAYWRIGHT_VERSION} && \
     npx playwright install-deps && \
     npm cache clean --force
+
+# Best-effort: pre-bake the configured Node version into nvm so the first
+# `ddev start` doesn't pay a runtime `nvm install`. Never fails the build — if
+# nvm isn't available at image-build time (add-on ordering), the post-start
+# hook installs the version at runtime instead.
+ARG NODE_VERSION=lts/*
+RUN export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"; \
+    if [ -s "${NVM_DIR}/nvm.sh" ]; then \
+      source "${NVM_DIR}/nvm.sh" && nvm install "${NODE_VERSION}" || true; \
+    else \
+      echo "nvm not present at build time; runtime hook will install Node ${NODE_VERSION}"; \
+    fi
 
 EXPOSE 9323

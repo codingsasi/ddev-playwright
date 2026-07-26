@@ -24,32 +24,34 @@ source ~/.nvm/nvm.sh 2>/dev/null || true
 # If the project already has a Playwright config at the root, skip scaffolding into
 # tests/playwright/. Just ensure browsers are installed and exit.
 if [ -f /var/www/html/playwright.config.ts ] || [ -f /var/www/html/playwright.config.js ]; then
-    echo "✓ Existing Playwright config detected at project root."
+    echo "Existing Playwright config detected at project root."
     echo "  Skipping scaffold setup — your project manages its own Playwright configuration."
     if [ -f /opt/playwright-browsers/.installed ]; then
-        echo "✓ Browsers already installed at /opt/playwright-browsers"
+        echo "Browsers already installed at /opt/playwright-browsers"
     else
         echo "Installing browsers for the project's @playwright/test version..."
-        nvm use 2>/dev/null || nvm install 22
+        nvm use 2>/dev/null || nvm install "${PLAYWRIGHT_NODE_VERSION:-lts/*}"
         cd /var/www/html || exit 1
         npx playwright install chromium firefox webkit
         touch /opt/playwright-browsers/.installed
-        echo "✓ Browsers installed."
+        echo "Browsers installed."
     fi
     echo ""
-    echo "✓ Playwright is ready. Run tests with: ddev playwright test"
+    echo "Playwright is ready. Run tests with: ddev playwright test"
     exit 0
 fi
 
 mkdir -p "${PW_DIR}"
 cd "${PW_DIR}"
 
-# Ensure .nvmrc exists so nvm uses Node 22
+# Ensure .nvmrc exists so nvm knows which Node to use. Seed it from the
+# configured default (PLAYWRIGHT_NODE_VERSION); .nvmrc is then the source of
+# truth — edit it to switch Node versions. Playwright requires Node >= 18.
 if [ ! -f .nvmrc ]; then
-  echo "22" > .nvmrc
-  echo "Created .nvmrc with Node 22"
+  echo "${PLAYWRIGHT_NODE_VERSION:-lts/*}" > .nvmrc
+  echo "Created .nvmrc with Node ${PLAYWRIGHT_NODE_VERSION:-lts/*}"
 fi
-nvm use 2>/dev/null || nvm install 22
+nvm use 2>/dev/null || nvm install
 
 # Init Playwright project if not present: always scaffold with latest, then pin version
 if [ ! -f package.json ]; then
@@ -79,13 +81,13 @@ export PLAYWRIGHT_BROWSERS_PATH="/opt/playwright-browsers/${ACTUAL_VERSION}"
 mkdir -p "${PLAYWRIGHT_BROWSERS_PATH}"
 MARKER="${PLAYWRIGHT_BROWSERS_PATH}/.installed"
 if [ -f "${MARKER}" ]; then
-  echo "✓ Browsers for Playwright ${ACTUAL_VERSION} already present in shared volume (use 'ddev reinstall-browsers' to refresh)"
+  echo "Browsers for Playwright ${ACTUAL_VERSION} already present in shared volume (use 'ddev reinstall-browsers' to refresh)"
 else
   echo "Installing browsers for Playwright ${ACTUAL_VERSION} into shared volume (${PLAYWRIGHT_BROWSERS_PATH})..."
   npx playwright install chromium firefox webkit
   touch "${MARKER}"
-  echo "✓ Browsers installed."
+  echo "Browsers installed."
 fi
 
 echo ""
-echo "✓ Playwright is ready. Run tests with: ddev playwright test"
+echo "Playwright is ready. Run tests with: ddev playwright test"

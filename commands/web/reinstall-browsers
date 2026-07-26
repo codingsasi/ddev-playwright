@@ -19,7 +19,9 @@ fi
 
 source ~/.nvm/nvm.sh 2>/dev/null || true
 cd "${PW_DIR}"
-[ -f .nvmrc ] && nvm use 2>/dev/null || nvm use 22 2>/dev/null || true
+# Honor the project's .nvmrc (single source of truth); install it if absent,
+# falling back to the configured default. Playwright requires Node >= 18.
+nvm use 2>/dev/null || nvm install 2>/dev/null || nvm use "${PLAYWRIGHT_NODE_VERSION:-lts/*}" 2>/dev/null || true
 
 # Resolve the *actual* installed Playwright version so the marker we manage
 # matches the one written by install-playwright / the post-start hook.
@@ -48,4 +50,4 @@ esac
 rm -f "${PLAYWRIGHT_BROWSERS_PATH}/.installed"
 npx playwright install --force chromium firefox webkit
 touch "${PLAYWRIGHT_BROWSERS_PATH}/.installed" 2>/dev/null || true
-echo "✓ Browsers for Playwright ${ACTUAL_VERSION} reinstalled in shared volume"
+echo "Browsers for Playwright ${ACTUAL_VERSION} reinstalled in shared volume"
